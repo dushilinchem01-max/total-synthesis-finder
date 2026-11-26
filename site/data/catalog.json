@@ -1,6 +1,155 @@
 {
-  "updated_at": "2026-11-26T12:58:53.684402+00:00",
+  "updated_at": "2026-11-26T14:49:31.903373+00:00",
   "problems": [
+    {
+      "id": "10-1038-s41467-026-78455-3-41ffabea",
+      "title": "A convergent total synthesis of the ivermectin aglycon through transition metal-mediated and anionic transformations",
+      "target_molecule": "ivermectin B1a aglycon",
+      "authors": [
+        "Goh Sennari",
+        "Ryo Saito",
+        "Ryusei Suzuki",
+        "Aoi Kimishima",
+        "Tomoyasu Hirose",
+        "Toshiaki Sunazuka"
+      ],
+      "journal": "Nature Communications",
+      "year": 2026,
+      "doi": "10.1038/s41467-026-78455-3",
+      "pdf_url": "https://www.nature.com/articles/s41467-026-78455-3_reference.pdf",
+      "source_url": "https://doi.org/10.1038/s41467-026-78455-3",
+      "num_steps": 12,
+      "difficulty": "advanced",
+      "tags": [
+        "total synthesis",
+        "ivermectin",
+        "macrolide",
+        "transition metal-mediated",
+        "anionic transformations"
+      ],
+      "problem_file": "problems/10-1038-s41467-026-78455-3-41ffabea.json",
+      "html_file": "problems/10-1038-s41467-026-78455-3-41ffabea.html",
+      "created_at": "2026-11-26T14:40:07.598078+00:00"
+    },
+    {
+      "id": "10-1248-cpb-c26-00316-3ecff14b",
+      "title": "Total Synthesis-Assisted Structure Determination and Biological Evaluation of Cytotoxic Cyclodepsipeptide Destruxin F",
+      "target_molecule": "Destruxin F",
+      "authors": [
+        "Daiki Shirai",
+        "Shione Kojima",
+        "Hideo Kigoshi",
+        "Masahito Yoshida"
+      ],
+      "journal": "Chemical and Pharmaceutical Bulletin",
+      "year": 2026,
+      "doi": "10.1248/cpb.c26-00316",
+      "pdf_url": "https://tsukuba.repo.nii.ac.jp/record/2026126/files/CPB_74(9)_665.pdf",
+      "source_url": "https://doi.org/10.1248/cpb.c26-00316",
+      "num_steps": 12,
+      "difficulty": "advanced",
+      "tags": [
+        "total synthesis",
+        "cyclodepsipeptide",
+        "structure determination",
+        "biological evaluation",
+        "macrolactonization"
+      ],
+      "problem_file": "problems/10-1248-cpb-c26-00316-3ecff14b.json",
+      "html_file": "problems/10-1248-cpb-c26-00316-3ecff14b.html",
+      "created_at": "2026-11-26T14:40:30.433969+00:00"
+    },
+    {
+      "id": "10-1021-jacs-6c09931-50e5608a",
+      "title": "Total Synthesis and Structural Revision of Rhabdobranin Reveals a Cryptic Gram-Negative Antibiotic",
+      "target_molecule": "Rhabdobranin",
+      "authors": [
+        "Woonkee S. Jo",
+        "Zaynoun Attieh",
+        "Jan J. Crames",
+        "Colton L. Knopp",
+        "Julie Connelly",
+        "Yi‐Ming Shi",
+        "Christopher Sean Wilson",
+        "Maryam Dehghan",
+        "Peter Grün",
+        "Sunna Chang",
+        "Fathima Shaffra Refai",
+        "Fabio Piano",
+        "Kristin C. Gunsalus",
+        "Tanja Schneider",
+        "Helge B. Bode",
+        "Alan R. Healy"
+      ],
+      "journal": "Journal of the American Chemical Society",
+      "year": 2026,
+      "doi": "10.1021/jacs.6c09931",
+      "pdf_url": "https://air.uniud.it/bitstream/11390/1341910/1/jacs.6c09931.pdf",
+      "source_url": "https://doi.org/10.1021/jacs.6c09931",
+      "num_steps": 8,
+      "difficulty": "advanced",
+      "tags": [
+        "total synthesis",
+        "stereochemical revision",
+        "antibiotic",
+        "natural product"
+      ],
+      "problem_file": "problems/10-1021-jacs-6c09931-50e5608a.json",
+      "html_file": "problems/10-1021-jacs-6c09931-50e5608a.html",
+      "created_at": "2026-11-26T14:41:39.788707+00:00"
+    },
+    {
+      "id": "10-17952-38eps-2026-p046-632adb98",
+      "title": "Total synthesis of the proposed structure of threoglucin A",
+      "target_molecule": "threoglucin A",
+      "authors": [
+        "Natalia Cano-Sampaio",
+        "Juan R. Del Valle"
+      ],
+      "journal": "European Peptide Symposium (EPS)",
+      "year": 2026,
+      "doi": "10.17952/38eps.2026.p046",
+      "pdf_url": "https://doi.org/10.17952/38eps.2026.p046",
+      "source_url": "https://doi.org/10.17952/38eps.2026.p046",
+      "num_steps": 4,
+      "difficulty": "advanced",
+      "tags": [
+        "total synthesis",
+        "RiPPs",
+        "1,3-oxazinane",
+        "cyclothreonine rearrangement",
+        "peptide synthesis"
+      ],
+      "problem_file": "problems/10-17952-38eps-2026-p046-632adb98.json",
+      "html_file": "problems/10-17952-38eps-2026-p046-632adb98.html",
+      "created_at": "2026-11-26T14:42:38.913930+00:00"
+    },
+    {
+      "id": "total-synthesis-of-vincristine-beec845e",
+      "title": "Total Synthesis of Vincristine",
+      "target_molecule": "Vincristine",
+      "authors": [
+        "Julia Karhumäki"
+      ],
+      "journal": "Aaltodoc (Aalto University)",
+      "year": 2026,
+      "doi": "",
+      "pdf_url": "https://aaltodoc.aalto.fi/bitstreams/ae8cfc06-4fb5-4be1-b0b1-09e167743e4a/download",
+      "source_url": "https://aaltodoc.aalto.fi/handle/123456789/148384",
+      "num_steps": 3,
+      "difficulty": "advanced",
+      "tags": [
+        "total synthesis",
+        "vincristine",
+        "vinblastine",
+        "catharanthine",
+        "vindoline",
+        "alkaloids"
+      ],
+      "problem_file": "problems/total-synthesis-of-vincristine-beec845e.json",
+      "html_file": "problems/total-synthesis-of-vincristine-beec845e.html",
+      "created_at": "2026-11-26T14:44:44.538350+00:00"
+    },
     {
       "id": "10-1002-anie-6282262-e17777b1",
       "title": "A Modular Diels–Alder Platform for the Total Synthesis of Diplodiatoxin and Four Tanzawaic Acids",
@@ -84,8 +233,8 @@
     }
   ],
   "last_period": {
-    "date_from": "2026-10-27",
+    "date_from": "2025-11-26",
     "date_to": "2026-11-26"
   },
-  "last_added": 0
+  "last_added": 5
 }
