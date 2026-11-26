@@ -1,0 +1,55 @@
+{
+  "generated_at": "2026-11-26T10:00:00Z",
+  "problems": [
+    {
+      "id": "strychnine-vanderwal-2011",
+      "title": "Concise Total Synthesis of Strychnine via a Zincke Aldehyde Intermediate",
+      "target_molecule": "(-)-Strychnine",
+      "authors": [
+        "D. B. C. Martin",
+        "C. D. Vanderwal"
+      ],
+      "journal": "Chemical Science",
+      "year": 2011,
+      "doi": "10.1039/C0SC00537A",
+      "pdf_url": "https://pubs.rsc.org/en/content/articlepdf/2011/sc/c0sc00537a",
+      "source_url": "https://pubs.rsc.org/en/content/articlelanding/2011/sc/c0sc00537a",
+      "num_steps": 6,
+      "difficulty": "Intermediate",
+      "tags": [
+        "alkaloid",
+        "indole",
+        "Zincke aldehyde",
+        "cascade"
+      ],
+      "problem_file": "problems/strychnine-vanderwal-2011.json",
+      "html_file": "problems/strychnine-vanderwal-2011.html",
+      "created_at": "2026-11-26T10:00:00Z"
+    },
+    {
+      "id": "artemisinin-cook-2012",
+      "title": "Concise Total Synthesis of (+)-Artemisinin",
+      "target_molecule": "(+)-Artemisinin",
+      "authors": [
+        "C. Zhu",
+        "S. P. Cook"
+      ],
+      "journal": "Journal of the American Chemical Society",
+      "year": 2012,
+      "doi": "10.1021/ja3061479",
+      "pdf_url": "https://pubs.acs.org/doi/pdf/10.1021/ja3061479",
+      "source_url": "https://pubs.acs.org/doi/10.1021/ja3061479",
+      "num_steps": 5,
+      "difficulty": "Introductory",
+      "tags": [
+        "terpenoid",
+        "endoperoxide",
+        "antimalarial",
+        "C-H activation"
+      ],
+      "problem_file": "problems/artemisinin-cook-2012.json",
+      "html_file": "problems/artemisinin-cook-2012.html",
+      "created_at": "2026-11-26T10:00:00Z"
+    }
+  ]
+}

@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>(+)-Artemisinin — Total Synthesis Flashcard</title>
+<style>
+  :root {
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --border: #cbd5e1;
+    --text: #0f172a;
+    --muted: #475569;
+    --accent: #1d4ed8;
+    --accent-soft: #eff6ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.4;
+  }
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .title-block h1 {
+    margin: 0;
+    font-size: 1.15rem;
+  }
+  .title-block .meta {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  button, .btn-link {
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    text-decoration: none;
+    font-weight: 500;
+  }
+  button:hover, .btn-link:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  main {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+  }
+  .snake-board {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .snake-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .snake-row.rtl {
+    justify-content: flex-end;
+  }
+  .snake-turn {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--accent);
+    padding: 0 48px;
+  }
+  .snake-turn.turn-right { text-align: right; }
+  .snake-turn.turn-left { text-align: left; }
+  .mol-card {
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    padding: 8px;
+    min-width: 200px;
+    transition: box-shadow 0.15s;
+  }
+  .product-card {
+    cursor: pointer;
+  }
+  .product-card:hover {
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+  }
+  .mol-badge {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .start-card .mol-badge {
+    color: var(--accent);
+  }
+  .mol-svg svg {
+    display: block;
+    max-width: 240px;
+    height: auto;
+  }
+  .step-arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 160px;
+    max-width: 220px;
+    text-align: center;
+  }
+  .reagent-box {
+    background: var(--accent-soft);
+    border: 1px solid #bfdbfe;
+    border-radius: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+    width: 100%;
+    font-size: 0.8rem;
+  }
+  .step-badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 2px;
+  }
+  .named-rxn {
+    font-weight: 600;
+    color: #1e3a8a;
+    font-size: 0.75rem;
+  }
+  .reagents-text {
+    font-weight: 600;
+    color: var(--text);
+  }
+  .cond-text {
+    color: var(--muted);
+    font-size: 0.74rem;
+    margin-top: 2px;
+  }
+  .arrow-line {
+    font-size: 1.5rem;
+    color: var(--text);
+    line-height: 1;
+    margin-top: 4px;
+  }
+  .is-hidden .mol-svg,
+  .is-hidden .named-rxn,
+  .is-hidden .reagents-text,
+  .is-hidden .cond-text {
+    filter: blur(8px);
+    opacity: 0.15;
+    user-select: none;
+  }
+  .is-hidden::after {
+    content: "Click to reveal";
+    display: block;
+    font-size: 0.72rem;
+    color: var(--accent);
+    font-weight: 600;
+    margin-top: 4px;
+  }
+  @media print {
+    header .controls { display: none; }
+    .is-hidden .mol-svg,
+    .is-hidden .named-rxn,
+    .is-hidden .reagents-text,
+    .is-hidden .cond-text {
+      filter: none;
+      opacity: 1;
+    }
+    .is-hidden::after { display: none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="title-block">
+    <h1>Concise Total Synthesis of (+)-Artemisinin</h1>
+    <div class="meta">C. Zhu, S. P. Cook &middot; Journal of the American Chemical Society &middot; 2012</div>
+  </div>
+  <div class="controls">
+    <button type="button" id="btnHideReagents" onclick="toggleGroup('reagent-box', this)">Hide Reagents</button>
+    <button type="button" id="btnHideProducts" onclick="toggleGroup('product-card', this)">Hide Products</button>
+    <button type="button" onclick="revealAll()">Reveal All</button>
+    <button type="button" onclick="window.print()">Print / PDF</button>
+    <a class="btn-link" href="https://doi.org/10.1021/ja3061479" target="_blank" rel="noopener">DOI</a><a class="btn-link" href="https://pubs.acs.org/doi/pdf/10.1021/ja3061479" target="_blank" rel="noopener">PDF</a>
+  </div>
+</header>
+<main>
+  <div class="snake-board">
+    <div class="snake-row ltr">
+    <div class="mol-card start-card">
+      <div class="mol-badge">Starting Material</div>
+      <div class="mol-svg"><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 140'><g stroke='#1e293b' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'><polygon points='75,45 110,25 145,45 145,85 110,105 75,85'/><line x1='75' y1='85' x2='48' y2='100'/><line x1='145' y1='45' x2='172' y2='30'/><line x1='149' y1='51' x2='176' y2='36'/></g><text x='176' y='34' font-family='sans-serif' font-size='13' font-weight='600' fill='#dc2626'>O</text><text x='32' y='110' font-family='sans-serif' font-size='12' fill='#475569'>Me</text></svg></div>
+    </div>
+    
+    <div class="step-arrow" data-step="1" title="Installs the vinyl group diastereoselectively on the cyclohexanone ring.">
+      <div class="reagent-box" onclick="toggleReveal(this)" tabindex="0" role="button" aria-label="Toggle step 1 reagents">
+        <span class="step-badge">Step 1</span>
+        <div class="named-rxn">Conjugate Addition</div>
+        <div class="reagents-text">LDA, TMSCl; then vinylmagnesium bromide, CuI</div>
+        <div class="cond-text">THF, -78 °C to 0 °C · 85%</div>
+      </div>
+      <div class="arrow-line">&#8594;</div>
+    </div>
+    
+    <div class="mol-card product-card" onclick="toggleReveal(this)" tabindex="0" role="button">
+      <div class="mol-badge">Intermediate 1</div>
+      <div class="mol-svg"><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 140'><g stroke='#1e293b' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'><polygon points='75,45 110,25 145,45 145,85 110,105 75,85'/><line x1='75' y1='85' x2='48' y2='100'/><polyline points='145,85 175,102 205,85'/><line x1='175' y1='96' x2='201' y2='81'/><line x1='110' y1='25' x2='110' y2='6'/></g><text x='105' y='15' font-family='sans-serif' font-size='13' font-weight='600' fill='#dc2626'>O</text></svg></div>
+    </div>
+    
+    <div class="step-arrow" data-step="2" title="Generates the kinetic enol triflate.">
+      <div class="reagent-box" onclick="toggleReveal(this)" tabindex="0" role="button" aria-label="Toggle step 2 reagents">
+        <span class="step-badge">Step 2</span>
+        <div class="named-rxn">Enol Triflate Formation</div>
+        <div class="reagents-text">KHMDS, PhNTf2</div>
+        <div class="cond-text">THF, -78 °C · 89%</div>
+      </div>
+      <div class="arrow-line">&#8594;</div>
+    </div>
+    
+    <div class="mol-card product-card" onclick="toggleReveal(this)" tabindex="0" role="button">
+      <div class="mol-badge">Intermediate 2</div>
+      <div class="mol-svg"><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 250 140'><g stroke='#1e293b' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'><polygon points='75,45 110,25 145,45 145,85 110,105 75,85'/><line x1='81' y1='49' x2='110' y2='32'/><line x1='75' y1='85' x2='48' y2='100'/><polyline points='145,85 175,102 205,85'/><line x1='110' y1='25' x2='110' y2='6'/></g><text x='104' y='18' font-family='sans-serif' font-size='12' font-weight='600' fill='#dc2626'>OTf</text></svg></div>
+    </div>
+    
+    <div class="step-arrow" data-step="3" title="Couples the side chain to assemble the carbon skeleton.">
+      <div class="reagent-box" onclick="toggleReveal(this)" tabindex="0" role="button" aria-label="Toggle step 3 reagents">
+        <span class="step-badge">Step 3</span>
+        <div class="named-rxn">Negishi Cross-Coupling</div>
+        <div class="reagents-text">Pd(PPh3)4, Zn(CH2CH=CH2)Br</div>
+        <div class="cond-text">THF, rt · 78%</div>
+      </div>
+      <div class="arrow-line">&#8594;</div>
+    </div>
+    
+    <div class="mol-card product-card" onclick="toggleReveal(this)" tabindex="0" role="button">
+      <div class="mol-badge">Intermediate 3</div>
+      <div class="mol-svg"><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 250 140'><g stroke='#1e293b' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'><polygon points='75,45 110,25 145,45 145,85 110,105 75,85'/><line x1='81' y1='49' x2='110' y2='32'/><polyline points='110,25 135,10 165,25 190,10'/><polyline points='145,85 175,102 205,85'/></g></svg></div>
+    </div>
+    
+    <div class="step-arrow" data-step="4" title="Cleaves the alkenes and introduces the peroxide bridge.">
+      <div class="reagent-box" onclick="toggleReveal(this)" tabindex="0" role="button" aria-label="Toggle step 4 reagents">
+        <span class="step-badge">Step 4</span>
+        <div class="named-rxn">Ozonolysis / Hydroperoxide Addition</div>
+        <div class="reagents-text">O3, then Me2S; H2O2, MoO4^2-</div>
+        <div class="cond-text">CH2Cl2 / MeOH, -78 °C to rt · 64%</div>
+      </div>
+      <div class="arrow-line">&#8594;</div>
+    </div>
+    
+    <div class="mol-card product-card" onclick="toggleReveal(this)" tabindex="0" role="button">
+      <div class="mol-badge">Intermediate 4</div>
+      <div class="mol-svg"><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 250 140'><g stroke='#1e293b' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'><polygon points='60,55 95,35 130,55 130,95 95,115 60,95'/><polygon points='130,55 165,35 200,55 200,95 165,115 130,95'/><line x1='95' y1='35' x2='130' y2='95' stroke-dasharray='3,3'/></g><text x='158' y='30' font-family='sans-serif' font-size='12' font-weight='600' fill='#dc2626'>O-O</text></svg></div>
+    </div>
+    </div><div class="snake-turn turn-right">&#8595;</div><div class="snake-row rtl">
+    <div class="mol-card product-card" onclick="toggleReveal(this)" tabindex="0" role="button">
+      <div class="mol-badge">Intermediate 5</div>
+      <div class="mol-svg"><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 250 140'><g stroke='#1e293b' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'><polygon points='60,55 95,35 130,55 130,95 95,115 60,95'/><polygon points='130,55 165,35 200,55 200,95 165,115 130,95'/><polyline points='130,55 110,20 150,20 165,35'/></g><text x='122' y='16' font-family='sans-serif' font-size='12' font-weight='600' fill='#dc2626'>O-O</text><text x='198' y='52' font-family='sans-serif' font-size='12' font-weight='600' fill='#dc2626'>O</text></svg></div>
+    </div>
+    
+    <div class="step-arrow" data-step="5" title="Final cascade cyclization affords (+)-Artemisinin.">
+      <div class="reagent-box" onclick="toggleReveal(this)" tabindex="0" role="button" aria-label="Toggle step 5 reagents">
+        <span class="step-badge">Step 5</span>
+        <div class="named-rxn">Acid-Catalyzed Endoperoxide Cyclization</div>
+        <div class="reagents-text">p-TsOH, O2</div>
+        <div class="cond-text">CH2Cl2, rt · 42%</div>
+      </div>
+      <div class="arrow-line">&#8592;</div>
+    </div>
+    </div>
+  </div>
+</main>
+<script>
+  function toggleReveal(el) {
+    el.classList.toggle('is-hidden');
+  }
+  function toggleGroup(cls, btn) {
+    const active = btn.classList.toggle('active');
+    document.querySelectorAll('.' + cls).forEach(el => {
+      el.classList.toggle('is-hidden', active);
+    });
+  }
+  function revealAll() {
+    document.querySelectorAll('.is-hidden').forEach(el => el.classList.remove('is-hidden'));
+    document.querySelectorAll('.controls button.active').forEach(b => b.classList.remove('active'));
+  }
+</script>
+</body>
+</html>

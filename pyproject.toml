@@ -1,0 +1,27 @@
+[project]
+name = "synthesis-finder"
+version = "0.1.0"
+description = "Autonomous total synthesis finder, extractor, and interactive snake-layout flashcard generator"
+requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.27.0",
+    "pillow>=10.0.0",
+    "numpy>=1.26.0",
+    "rdkit>=2024.3.1",
+    "pypdf>=4.0.0",
+    "pytest>=8.0.0",
+]
+
+[project.scripts]
+synthesis-finder = "synthesis_finder.pipeline:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/synthesis_finder"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
