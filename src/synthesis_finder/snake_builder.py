@@ -8,11 +8,13 @@ from pathlib import Path
 from synthesis_finder.chem_render import render_molecule_svg, render_placeholder_svg
 from synthesis_finder.models import SynthesisProblem, SynthesisStep
 
-STEPS_PER_ROW = 4
+STEPS_PER_ROW = 3
 
 
-def _ensure_svg(svg: str, smiles: str, label: str) -> str:
-    """Return an inline SVG string, rendering from SMILES or falling back to a placeholder."""
+def _ensure_visual(image_uri: str, svg: str, smiles: str, label: str) -> str:
+    """Return an HTML fragment (<img> for cropped ChemDraw PNG, or inline <svg>)."""
+    if image_uri and image_uri.startswith("data:image/"):
+        return f'<img src="{html.escape(image_uri)}" alt="{html.escape(label)}" loading="lazy">'
     if svg and "<svg" in svg:
         return svg
     if smiles:
@@ -46,7 +48,7 @@ def _format_step_arrow(step: SynthesisStep, direction: str) -> str:
     """
 
 
-def _format_mol_card(svg: str, label: str, *, is_start: bool = False, step_index: int = 0) -> str:
+def _format_mol_card(visual_html: str, *, is_start: bool = False, step_index: int = 0) -> str:
     """Render a molecule structure card (start material or step product)."""
     cls = "mol-card start-card" if is_start else "mol-card product-card"
     click_attr = "" if is_start else ' onclick="toggleReveal(this)" tabindex="0" role="button"'
@@ -54,7 +56,7 @@ def _format_mol_card(svg: str, label: str, *, is_start: bool = False, step_index
     return f"""
     <div class="{cls}"{click_attr}>
       <div class="mol-badge">{html.escape(badge)}</div>
-      <div class="mol-svg">{svg}</div>
+      <div class="mol-visual">{visual_html}</div>
     </div>
     """
 
@@ -69,15 +71,18 @@ def build_snake_html(problem: SynthesisProblem) -> str:
     doi_url = f"https://doi.org/{html.escape(problem.doi)}" if problem.doi else ""
     pdf_url = html.escape(problem.pdf_url) if problem.pdf_url else ""
 
-    start_svg = _ensure_svg(problem.start_svg, problem.start_smiles, "Starting Material")
+    start_visual = _ensure_visual(
+        problem.start_image,
+        problem.start_svg,
+        problem.start_smiles,
+        "Starting Material",
+    )
 
-    # Build linear sequence of nodes: [start_card, (step_arrow, product_card), ...]
-    # Chunk into rows of STEPS_PER_ROW steps in serpentine (snake) order.
     rows_html: list[str] = []
     steps = problem.steps
     if not steps:
         rows_html.append(
-            f'<div class="snake-row ltr">{_format_mol_card(start_svg, "Start", is_start=True)}</div>'
+            f'<div class="snake-row ltr">{_format_mol_card(start_visual, is_start=True)}</div>'
         )
     else:
         num_rows = (len(steps) + STEPS_PER_ROW - 1) // STEPS_PER_ROW
@@ -87,10 +92,11 @@ def build_snake_html(problem: SynthesisProblem) -> str:
             items: list[str] = []
 
             if r_idx == 0:
-                items.append(_format_mol_card(start_svg, "Start", is_start=True))
+                items.append(_format_mol_card(start_visual, is_start=True))
 
             for step in chunk:
-                prod_svg = _ensure_svg(
+                prod_visual = _ensure_visual(
+                    step.product_image,
                     step.product_svg,
                     step.product_smiles,
                     f"Step {step.step_index} Product",
@@ -98,8 +104,7 @@ def build_snake_html(problem: SynthesisProblem) -> str:
                 items.append(_format_step_arrow(step, direction))
                 items.append(
                     _format_mol_card(
-                        prod_svg,
-                        f"Step {step.step_index}",
+                        prod_visual,
                         is_start=False,
                         step_index=step.step_index,
                     )
@@ -108,7 +113,7 @@ def build_snake_html(problem: SynthesisProblem) -> str:
             if direction == "rtl":
                 items.reverse()
 
-            rows_html.append(f'<div class="snake-row {direction}">{"".join(items)}</div>')
+            rows_html.append(f'<div class="snake-row-wrap"><div class="snake-row {direction}">{"".join(items)}</div></div>')
             if r_idx < num_rows - 1:
                 turn_side = "turn-right" if direction == "ltr" else "turn-left"
                 rows_html.append(f'<div class="snake-turn {turn_side}">&#8595;</div>')
@@ -130,7 +135,7 @@ def build_snake_html(problem: SynthesisProblem) -> str:
 <title>{target} — Total Synthesis Flashcard</title>
 <style>
   :root {{
-    --bg: #f8fafc;
+    --bg: #f1f5f9;
     --card: #ffffff;
     --border: #cbd5e1;
     --text: #0f172a;
@@ -152,7 +157,7 @@ def build_snake_html(problem: SynthesisProblem) -> str:
     z-index: 20;
     background: var(--card);
     border-bottom: 1px solid var(--border);
-    padding: 12px 20px;
+    padding: 12px 24px;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -161,7 +166,7 @@ def build_snake_html(problem: SynthesisProblem) -> str:
   }}
   .title-block h1 {{
     margin: 0;
-    font-size: 1.15rem;
+    font-size: 1.1rem;
   }}
   .title-block .meta {{
     font-size: 0.85rem;
@@ -178,8 +183,8 @@ def build_snake_html(problem: SynthesisProblem) -> str:
     border: 1px solid var(--border);
     background: var(--card);
     color: var(--text);
-    padding: 6px 12px;
-    border-radius: 6px;
+    padding: 7px 13px;
+    border-radius: 8px;
     font-size: 0.85rem;
     cursor: pointer;
     text-decoration: none;
@@ -195,80 +200,97 @@ def build_snake_html(problem: SynthesisProblem) -> str:
     border-color: var(--accent);
   }}
   main {{
-    max-width: 1440px;
+    max-width: 1480px;
     margin: 0 auto;
     padding: 24px 20px 60px;
   }}
   .snake-board {{
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
   }}
-  .snake-row {{
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 10px;
+  .snake-row-wrap {{
+    overflow-x: auto;
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: 12px;
-    padding: 16px;
+    padding: 18px 20px;
+  }}
+  .snake-row {{
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 12px;
+    min-width: max-content;
   }}
   .snake-row.rtl {{
-    justify-content: flex-end;
+    margin-left: auto;
   }}
   .snake-turn {{
-    font-size: 1.8rem;
+    font-size: 1.75rem;
     font-weight: 700;
     color: var(--accent);
-    padding: 0 48px;
+    padding: 0 72px;
+    line-height: 1;
   }}
   .snake-turn.turn-right {{ text-align: right; }}
   .snake-turn.turn-left {{ text-align: left; }}
   .mol-card {{
-    position: relative;
+    flex: 0 0 auto;
+    width: 240px;
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 10px;
     background: #fff;
-    padding: 8px;
-    min-width: 200px;
+    padding: 10px;
+    text-align: center;
     transition: box-shadow 0.15s;
   }}
   .product-card {{
     cursor: pointer;
   }}
   .product-card:hover {{
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
   }}
   .mol-badge {{
     font-size: 0.72rem;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--muted);
-    margin-bottom: 4px;
+    margin-bottom: 6px;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.04em;
+    text-align: left;
   }}
   .start-card .mol-badge {{
     color: var(--accent);
   }}
-  .mol-svg svg {{
+  .mol-visual {{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 150px;
+  }}
+  .mol-visual img,
+  .mol-visual svg {{
     display: block;
-    max-width: 240px;
+    max-width: 100%;
+    max-height: 180px;
+    width: auto;
     height: auto;
+    object-fit: contain;
   }}
   .step-arrow {{
+    flex: 0 0 auto;
+    width: 190px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    min-width: 160px;
-    max-width: 220px;
     text-align: center;
   }}
   .reagent-box {{
     background: var(--accent-soft);
     border: 1px solid #bfdbfe;
-    border-radius: 6px;
-    padding: 6px 10px;
+    border-radius: 8px;
+    padding: 8px 10px;
     cursor: pointer;
     width: 100%;
     font-size: 0.8rem;
@@ -284,6 +306,7 @@ def build_snake_html(problem: SynthesisProblem) -> str:
     font-weight: 600;
     color: #1e3a8a;
     font-size: 0.75rem;
+    margin-bottom: 2px;
   }}
   .reagents-text {{
     font-weight: 600;
@@ -300,7 +323,7 @@ def build_snake_html(problem: SynthesisProblem) -> str:
     line-height: 1;
     margin-top: 4px;
   }}
-  .is-hidden .mol-svg,
+  .is-hidden .mol-visual,
   .is-hidden .named-rxn,
   .is-hidden .reagents-text,
   .is-hidden .cond-text {{
@@ -318,7 +341,8 @@ def build_snake_html(problem: SynthesisProblem) -> str:
   }}
   @media print {{
     header .controls {{ display: none; }}
-    .is-hidden .mol-svg,
+    .snake-row-wrap {{ overflow: visible; }}
+    .is-hidden .mol-visual,
     .is-hidden .named-rxn,
     .is-hidden .reagents-text,
     .is-hidden .cond-text {{

@@ -57,7 +57,7 @@ class OAResolver:
         self.unpaywall_email = (
             unpaywall_email
             or os.environ.get("UNPAYWALL_EMAIL")
-            or "synthesis-finder@example.com"
+            or "synthesis-finder@users.noreply.github.com"
         )
         self.verify_pdf = verify_pdf
         self._owns_client = client is None

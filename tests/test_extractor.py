@@ -265,3 +265,69 @@ def test_extractor_screening_and_pdf_extraction() -> None:
     if RDKIT_AVAILABLE:
         assert "<svg" in result.problem.start_svg
         assert "<svg" in result.problem.steps[0].product_svg
+
+
+def test_pdf_cropper_and_two_pass_extraction(tmp_path) -> None:
+    import pymupdf as fitz
+
+    from synthesis_finder.pdf_cropper import crop_box_2d, render_pdf_pages
+
+    pdf_file = tmp_path / "demo_synth.pdf"
+    doc = fitz.open()
+    doc.new_page(width=600, height=800)
+    p1 = doc.new_page(width=600, height=800)
+    p1.draw_rect(fitz.Rect(60, 100, 180, 220), color=(0, 0, 0), fill=(0.1, 0.1, 0.1))
+    p1.draw_rect(fitz.Rect(350, 100, 500, 220), color=(0, 0, 0), fill=(0.1, 0.1, 0.1))
+    doc.save(str(pdf_file))
+    doc.close()
+
+    pages = render_pdf_pages(pdf_path=pdf_file, dpi=144)
+    assert len(pages) == 2
+    cropped = crop_box_2d(pages[1], [120, 95, 280, 305])
+    assert cropped.width > 20 and cropped.height > 20
+
+    call_count = {"n": 0}
+
+    def gemini_two_pass(request: httpx.Request) -> httpx.Response:
+        call_count["n"] += 1
+        if call_count["n"] == 1:
+            payload = {
+                "target_molecule": "Demo Natural Product",
+                "difficulty": "intermediate",
+                "tags": ["total synthesis"],
+                "scheme_pages": [1],
+            }
+        else:
+            payload = {
+                "start_box_2d": [120, 95, 280, 305],
+                "steps": [
+                    {
+                        "step_index": 1,
+                        "reagents": "LiAlH4",
+                        "conditions": "THF, 0 °C",
+                        "yield": "90%",
+                        "named_reaction": "Reduction",
+                        "product_box_2d": [120, 580, 280, 840],
+                        "notes": "Clean conversion",
+                    }
+                ],
+            }
+        return httpx.Response(
+            200,
+            json={"candidates": [{"content": {"parts": [{"text": json.dumps(payload)}]}}]},
+        )
+
+    llm = MultiProviderLLM(
+        gemini=GeminiClient(
+            api_key="gem-key",
+            http_client=httpx.Client(transport=httpx.MockTransport(gemini_two_pass)),
+        ),
+        groq=create_groq_client(api_key=""),
+        nvidia=create_nvidia_client(api_key=""),
+    )
+    res = extract_synthesis_from_pdf(pdf_path=pdf_file, title="Demo", llm=llm, dpi=144)
+    assert res.problem.start_image.startswith("data:image/png;base64,")
+    assert len(res.problem.steps) == 1
+    assert res.problem.steps[0].product_image.startswith("data:image/png;base64,")
+    assert res.problem.steps[0].reagents == "LiAlH4"
+

@@ -83,8 +83,9 @@ def test_run_pipeline_end_to_end_and_dedup(tmp_path: Path) -> None:
     )
 
     mock_llm = MagicMock()
-    mock_llm.available_text_providers.return_value = ["groq"]
-    mock_llm.gemini = MagicMock()
+    mock_llm.groq.is_configured = True
+    mock_llm.nvidia.is_configured = False
+    mock_llm.gemini.is_configured = True
 
     with (
         patch("synthesis_finder.pipeline.MultiProviderLLM", return_value=mock_llm),

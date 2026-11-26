@@ -1,636 +1,378 @@
-(function () {
-  "use strict";
-
+(() => {
+  const STEPS_PER_ROW = 3;
   const STORAGE_KEY = "synthesis_finder_progress_v1";
-  const THEME_KEY = "synthesis_finder_theme";
+  const THEME_KEY = "synthesis_finder_theme_v1";
 
   const state = {
     catalog: [],
-    generatedAt: null,
+    updatedAt: null,
     currentProblem: null,
+    currentEntry: null,
     progress: loadProgress(),
-    filters: {
-      search: "",
-      difficulty: "all",
-      journal: "all",
-      year: "all",
-      status: "all",
-      sort: "newest",
-    },
-    study: {
-      hideReagents: false,
-      hideProducts: false,
-      stepMode: false,
-      revealedStep: 0,
-      revealedReagents: new Set(),
-      revealedProducts: new Set(),
-    },
+    hideReagents: false,
+    hideProducts: false,
   };
 
-  // DOM refs
-  const catalogView = document.getElementById("catalog-view");
-  const solverView = document.getElementById("solver-view");
-  const catalogGrid = document.getElementById("catalog-grid");
-  const catalogEmpty = document.getElementById("catalog-empty");
-  const resultsCount = document.getElementById("results-count");
-  const catalogUpdated = document.getElementById("catalog-updated");
-  const statsPills = document.getElementById("stats-pills");
-
-  const searchInput = document.getElementById("search-input");
-  const sortSelect = document.getElementById("sort-select");
-  const filterDifficulty = document.getElementById("filter-difficulty");
-  const filterJournal = document.getElementById("filter-journal");
-  const filterYear = document.getElementById("filter-year");
-  const filterStatus = document.getElementById("filter-status");
-  const resetFiltersBtn = document.getElementById("reset-filters-btn");
-  const emptyResetBtn = document.getElementById("empty-reset-btn");
-
-  const backToCatalogBtn = document.getElementById("back-to-catalog");
-  const problemHeader = document.getElementById("problem-header");
-  const synthesisSequence = document.getElementById("synthesis-sequence");
-  const solverBookmarkBtn = document.getElementById("solver-bookmark-btn");
-  const snakeActions = document.getElementById("snake-actions");
-
-  const toggleHideReagents = document.getElementById("toggle-hide-reagents");
-  const toggleHideProducts = document.getElementById("toggle-hide-products");
-  const toggleStepMode = document.getElementById("toggle-step-mode");
-  const stepControls = document.getElementById("step-controls");
-  const prevStepBtn = document.getElementById("prev-step-btn");
-  const nextStepBtn = document.getElementById("next-step-btn");
-  const revealAllBtn = document.getElementById("reveal-all-btn");
-  const stepCounter = document.getElementById("step-counter");
-
-  const themeToggle = document.getElementById("theme-toggle");
-  const themeIcon = document.getElementById("theme-icon");
+  const els = {
+    catalogView: document.getElementById("catalogView"),
+    problemView: document.getElementById("problemView"),
+    updatedLabel: document.getElementById("updatedLabel"),
+    searchInput: document.getElementById("searchInput"),
+    difficultyFilter: document.getElementById("difficultyFilter"),
+    journalFilter: document.getElementById("journalFilter"),
+    progressFilter: document.getElementById("progressFilter"),
+    statsRow: document.getElementById("statsRow"),
+    catalogGrid: document.getElementById("catalogGrid"),
+    emptyState: document.getElementById("emptyState"),
+    backToCatalog: document.getElementById("backToCatalog"),
+    problemLinks: document.getElementById("problemLinks"),
+    problemHeader: document.getElementById("problemHeader"),
+    snakeBoard: document.getElementById("snakeBoard"),
+    btnHideReagents: document.getElementById("btnHideReagents"),
+    btnHideProducts: document.getElementById("btnHideProducts"),
+    btnStepByStep: document.getElementById("btnStepByStep"),
+    btnRevealAll: document.getElementById("btnRevealAll"),
+    btnBookmark: document.getElementById("btnBookmark"),
+    btnMarkSolved: document.getElementById("btnMarkSolved"),
+    btnSnakeHtml: document.getElementById("btnSnakeHtml"),
+    themeToggle: document.getElementById("themeToggle"),
+  };
 
   function loadProgress() {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : {};
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
     } catch {
       return {};
     }
   }
 
   function saveProgress() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.progress));
-    } catch {
-      // ignore storage quota errors
-    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.progress));
   }
 
-  function getProblemProgress(id) {
-    return state.progress[id] || { status: "unsolved", bookmarked: false };
+  function getStatus(id) {
+    return state.progress[id] || { solved: false, bookmarked: false };
   }
 
-  function setProblemStatus(id, status) {
-    const cur = getProblemProgress(id);
-    state.progress[id] = { ...cur, status };
-    saveProgress();
-    renderStatsPills();
-  }
-
-  function toggleBookmark(id) {
-    const cur = getProblemProgress(id);
-    state.progress[id] = { ...cur, bookmarked: !cur.bookmarked };
-    saveProgress();
-    renderStatsPills();
+  function escapeHtml(str) {
+    return String(str || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
   }
 
   function initTheme() {
     const saved = localStorage.getItem(THEME_KEY) || "light";
     document.documentElement.setAttribute("data-theme", saved);
-    themeIcon.textContent = saved === "dark" ? "☀️" : "🌙";
+    els.themeToggle.addEventListener("click", () => {
+      const cur = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", cur);
+      localStorage.setItem(THEME_KEY, cur);
+    });
   }
 
-  themeToggle.addEventListener("click", () => {
-    const current = document.documentElement.getAttribute("data-theme");
-    const next = current === "dark" ? "light" : "dark";
-    document.documentElement.setAttribute("data-theme", next);
-    localStorage.setItem(THEME_KEY, next);
-    themeIcon.textContent = next === "dark" ? "☀️" : "🌙";
-  });
-
-  function resolveDataPath(relPath) {
-    if (!relPath) return "";
-    if (/^https?:\/\//i.test(relPath)) return relPath;
-    const clean = relPath.replace(/^\/+/, "");
-    return clean.startsWith("data/") ? clean : `data/${clean}`;
-  }
-
-  function escapeHtml(str) {
-    return String(str ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
-  }
-
-  function difficultyBadgeClass(diff) {
-    const d = (diff || "").toLowerCase();
-    if (d.includes("intro")) return "badge-intro";
-    if (d.includes("adv")) return "badge-adv";
-    return "badge-inter";
-  }
-
-  function renderStatsPills() {
-    const total = state.catalog.length;
-    let solved = 0;
-    let bookmarked = 0;
-    for (const item of state.catalog) {
-      const p = getProblemProgress(item.id);
-      if (p.status === "solved") solved += 1;
-      if (p.bookmarked) bookmarked += 1;
+  async function loadCatalog() {
+    try {
+      const resp = await fetch("data/catalog.json?v=" + Date.now());
+      const data = await resp.json();
+      state.catalog = data.problems || [];
+      state.updatedAt = data.updated_at || data.generated_at || null;
+      els.updatedLabel.textContent = state.updatedAt
+        ? "Updated " + new Date(state.updatedAt).toLocaleDateString()
+        : `${state.catalog.length} problems`;
+      populateJournalFilter();
+      handleRoute();
+    } catch (err) {
+      els.updatedLabel.textContent = "Catalog unavailable";
+      els.emptyState.textContent = "Failed to load data/catalog.json.";
+      els.emptyState.classList.remove("hidden");
     }
-    statsPills.innerHTML = `
-      <span class="stat-pill">${total} Problems</span>
-      <span class="stat-pill solved">${solved} Solved</span>
-      <span class="stat-pill">${bookmarked} ★</span>
-    `;
   }
 
-  function populateFilterOptions() {
-    const journals = [...new Set(state.catalog.map((p) => p.journal).filter(Boolean))].sort();
-    const years = [...new Set(state.catalog.map((p) => p.year).filter(Boolean))].sort((a, b) => b - a);
-
-    filterJournal.innerHTML = `<option value="all">All Journals</option>` +
-      journals.map((j) => `<option value="${escapeHtml(j)}">${escapeHtml(j)}</option>`).join("");
-
-    filterYear.innerHTML = `<option value="all">All Years</option>` +
-      years.map((y) => `<option value="${y}">${y}</option>`).join("");
+  function populateJournalFilter() {
+    const journals = [...new Set(state.catalog.map(p => p.journal).filter(Boolean))].sort();
+    journals.forEach(j => {
+      const opt = document.createElement("option");
+      opt.value = j;
+      opt.textContent = j;
+      els.journalFilter.appendChild(opt);
+    });
   }
 
-  function getFilteredCatalog() {
-    const q = state.filters.search.trim().toLowerCase();
-    const filtered = state.catalog.filter((item) => {
-      const prog = getProblemProgress(item.id);
+  function renderCatalog() {
+    const q = els.searchInput.value.trim().toLowerCase();
+    const diff = els.difficultyFilter.value.toLowerCase();
+    const journal = els.journalFilter.value;
+    const prog = els.progressFilter.value;
 
-      if (state.filters.difficulty !== "all" && item.difficulty !== state.filters.difficulty) return false;
-      if (state.filters.journal !== "all" && item.journal !== state.filters.journal) return false;
-      if (state.filters.year !== "all" && String(item.year) !== state.filters.year) return false;
-      if (state.filters.status === "bookmarked" && !prog.bookmarked) return false;
-      if (["unsolved", "in_progress", "solved"].includes(state.filters.status) && prog.status !== state.filters.status) {
-        return false;
-      }
-
+    const filtered = state.catalog.filter(item => {
+      if (diff && (item.difficulty || "").toLowerCase() !== diff) return false;
+      if (journal && item.journal !== journal) return false;
+      const st = getStatus(item.id);
+      if (prog === "solved" && !st.solved) return false;
+      if (prog === "unsolved" && st.solved) return false;
+      if (prog === "bookmarked" && !st.bookmarked) return false;
       if (q) {
-        const haystack = [
+        const hay = [
           item.target_molecule,
           item.title,
           item.journal,
-          item.doi,
-          String(item.year || ""),
-          ...(item.authors || []),
           ...(item.tags || []),
-        ]
-          .join(" ")
-          .toLowerCase();
-        if (!haystack.includes(q)) return false;
+          ...(item.authors || []),
+        ].join(" ").toLowerCase();
+        if (!hay.includes(q)) return false;
       }
       return true;
     });
 
-    filtered.sort((a, b) => {
-      switch (state.filters.sort) {
-        case "year-desc":
-          return (b.year || 0) - (a.year || 0);
-        case "steps-asc":
-          return (a.num_steps || 0) - (b.num_steps || 0);
-        case "steps-desc":
-          return (b.num_steps || 0) - (a.num_steps || 0);
-        case "newest":
-        default:
-          return String(b.created_at || "").localeCompare(String(a.created_at || ""));
-      }
-    });
+    const solvedCount = state.catalog.filter(i => getStatus(i.id).solved).length;
+    els.statsRow.textContent = `Showing ${filtered.length} of ${state.catalog.length} total syntheses · ${solvedCount} solved`;
 
-    return filtered;
+    els.catalogGrid.innerHTML = "";
+    els.emptyState.classList.toggle("hidden", filtered.length > 0);
+
+    filtered.forEach(item => {
+      const st = getStatus(item.id);
+      const card = document.createElement("article");
+      card.className = "problem-card";
+      card.onclick = () => {
+        window.location.hash = `#/problem/${encodeURIComponent(item.id)}`;
+      };
+
+      const tagsHtml = (item.tags || []).slice(0, 3).map(t => `<span class="pill">${escapeHtml(t)}</span>`).join("");
+      const solvedBadge = st.solved ? `<span class="pill pill-solved">Solved</span>` : "";
+      const bookmarkBadge = st.bookmarked ? `<span class="pill pill-accent">Saved</span>` : "";
+
+      card.innerHTML = `
+        <div>
+          <div class="card-top">
+            <div class="card-target">${escapeHtml(item.target_molecule || item.title)}</div>
+            <span class="pill pill-accent">${item.num_steps || 0} steps</span>
+          </div>
+          <div class="card-title">${escapeHtml(item.title)}</div>
+        </div>
+        <div class="card-meta">
+          <span class="pill">${escapeHtml((item.difficulty || "intermediate").toLowerCase())}</span>
+          ${solvedBadge}
+          ${bookmarkBadge}
+          ${tagsHtml}
+        </div>
+        <div class="card-footer">
+          <span>${escapeHtml(item.journal || "Open Access")}</span>
+          <span>${escapeHtml(item.year || "")}</span>
+        </div>
+      `;
+      els.catalogGrid.appendChild(card);
+    });
   }
 
-  function renderCatalog() {
-    const items = getFilteredCatalog();
-    resultsCount.textContent = `Showing ${items.length} of ${state.catalog.length} problems`;
-    if (state.generatedAt) {
-      catalogUpdated.textContent = `Updated: ${new Date(state.generatedAt).toLocaleDateString()}`;
-    }
-
-    if (items.length === 0) {
-      catalogGrid.innerHTML = "";
-      catalogEmpty.classList.remove("hidden");
+  async function openProblem(id) {
+    const entry = state.catalog.find(p => p.id === id);
+    if (!entry) {
+      showCatalogView();
       return;
     }
-
-    catalogEmpty.classList.add("hidden");
-    catalogGrid.innerHTML = items
-      .map((item) => {
-        const prog = getProblemProgress(item.id);
-        const authors = (item.authors || []).join(", ");
-        const doiUrl = item.doi ? `https://doi.org/${encodeURIComponent(item.doi)}` : item.source_url;
-        const statusBadge =
-          prog.status === "solved"
-            ? `<span class="badge badge-solved">✓ Solved</span>`
-            : prog.status === "in_progress"
-            ? `<span class="badge badge-progress">In Progress</span>`
-            : "";
-
-        return `
-          <article class="problem-card">
-            <div class="card-top">
-              <h3 class="target-name">${escapeHtml(item.target_molecule || "Unknown Target")}</h3>
-              <button
-                type="button"
-                class="bookmark-btn ${prog.bookmarked ? "active" : ""}"
-                data-bookmark-id="${escapeHtml(item.id)}"
-                title="${prog.bookmarked ? "Remove bookmark" : "Bookmark problem"}"
-              >${prog.bookmarked ? "★" : "☆"}</button>
-            </div>
-            <h4 class="card-title">${escapeHtml(item.title)}</h4>
-            <div class="card-meta">
-              ${escapeHtml(item.journal || "Unknown Journal")} (${escapeHtml(item.year || "—")})
-              ${authors ? `<br/><span>${escapeHtml(authors)}</span>` : ""}
-            </div>
-            <div class="badges-row">
-              <span class="badge ${difficultyBadgeClass(item.difficulty)}">${escapeHtml(item.difficulty || "Intermediate")}</span>
-              <span class="badge">${item.num_steps ?? "?"} steps</span>
-              ${statusBadge}
-            </div>
-            ${
-              item.tags && item.tags.length
-                ? `<div class="tags-row">${item.tags.map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join("")}</div>`
-                : ""
-            }
-            <div class="card-actions">
-              <div class="ext-links">
-                ${doiUrl ? `<a class="btn btn-ghost btn-sm" href="${escapeHtml(doiUrl)}" target="_blank" rel="noopener">DOI ↗</a>` : ""}
-                ${item.pdf_url ? `<a class="btn btn-ghost btn-sm" href="${escapeHtml(item.pdf_url)}" target="_blank" rel="noopener">PDF ↗</a>` : ""}
-              </div>
-              <a class="btn btn-primary btn-sm" href="#/problem/${encodeURIComponent(item.id)}">Open Problem →</a>
-            </div>
-          </article>
-        `;
-      })
-      .join("");
-  }
-
-  catalogGrid.addEventListener("click", (e) => {
-    const btn = e.target.closest("[data-bookmark-id]");
-    if (!btn) return;
-    toggleBookmark(btn.getAttribute("data-bookmark-id"));
-    renderCatalog();
-  });
-
-  // Solver view
-  async function openProblem(id) {
-    const entry = state.catalog.find((p) => p.id === id);
-    const problemPath = entry?.problem_file ? resolveDataPath(entry.problem_file) : `data/problems/${encodeURIComponent(id)}.json`;
-
-    catalogView.classList.add("hidden");
-    solverView.classList.remove("hidden");
-    problemHeader.innerHTML = `<p class="muted">Loading synthesis problem...</p>`;
-    synthesisSequence.innerHTML = "";
+    state.currentEntry = entry;
+    els.catalogView.classList.add("hidden");
+    els.problemView.classList.remove("hidden");
+    els.snakeBoard.innerHTML = `<div class="empty-state">Loading synthesis…</div>`;
 
     try {
-      const res = await fetch(problemPath);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const problem = await res.json();
-      state.currentProblem = { ...problem, html_file: entry?.html_file || problem.html_file };
-      state.study.revealedStep = state.study.stepMode ? 0 : (problem.steps || []).length;
-      state.study.revealedReagents.clear();
-      state.study.revealedProducts.clear();
-
-      renderSolverHeader();
-      renderStepControls();
-      renderSynthesisSequence();
-    } catch (err) {
-      problemHeader.innerHTML = `
-        <h1>Failed to load problem</h1>
-        <p class="muted">${escapeHtml(err.message)}</p>
-      `;
+      const resp = await fetch("data/" + entry.problem_file + "?v=" + Date.now());
+      const problem = await resp.json();
+      state.currentProblem = problem;
+      state.hideReagents = false;
+      state.hideProducts = false;
+      renderProblemView(problem, entry);
+    } catch {
+      els.snakeBoard.innerHTML = `<div class="empty-state">Failed to load problem JSON.</div>`;
     }
   }
 
-  function renderSolverHeader() {
-    const p = state.currentProblem;
-    if (!p) return;
-    const prog = getProblemProgress(p.id);
-    const doiUrl = p.doi ? `https://doi.org/${encodeURIComponent(p.doi)}` : p.source_url;
-    const authors = (p.authors || []).join(", ");
+  function renderVisualHtml(imageUri, svgStr, label) {
+    if (imageUri && imageUri.startsWith("data:image/")) {
+      return `<img src="${escapeHtml(imageUri)}" alt="${escapeHtml(label)}">`;
+    }
+    if (svgStr && svgStr.includes("<svg")) {
+      return svgStr;
+    }
+    return `<span style="color:#64748b;font-size:0.85rem;">${escapeHtml(label)}</span>`;
+  }
 
-    // Update segmented status buttons
-    document.querySelectorAll(".seg-btn").forEach((btn) => {
-      btn.classList.toggle("active", btn.getAttribute("data-status") === prog.status);
-    });
-    solverBookmarkBtn.textContent = prog.bookmarked ? "★ Bookmarked" : "☆ Bookmark";
+  function renderProblemView(problem, entry) {
+    const authors = (problem.authors || []).slice(0, 5).join(", ") + ((problem.authors || []).length > 5 ? " et al." : "");
+    const meta = [authors, problem.journal, problem.year].filter(Boolean).map(escapeHtml).join(" · ");
 
-    problemHeader.innerHTML = `
-      <h1>${escapeHtml(p.target_molecule || p.title)}</h1>
-      <h2>${escapeHtml(p.title)}</h2>
-      <div class="card-meta">
-        <strong>${escapeHtml(p.journal || "")}</strong> (${escapeHtml(p.year || "—")})
-        ${authors ? ` • ${escapeHtml(authors)}` : ""}
-        • ${(p.steps || []).length} steps
-      </div>
-      <div class="problem-links">
-        ${doiUrl ? `<a class="btn btn-outline btn-sm" href="${escapeHtml(doiUrl)}" target="_blank" rel="noopener">Original Paper / DOI ↗</a>` : ""}
-        ${p.pdf_url ? `<a class="btn btn-outline btn-sm" href="${escapeHtml(p.pdf_url)}" target="_blank" rel="noopener">Open-Access PDF ↗</a>` : ""}
-      </div>
+    els.problemHeader.innerHTML = `
+      <h1>${escapeHtml(problem.title || problem.target_molecule)}</h1>
+      <div class="problem-header-meta">${meta}</div>
     `;
 
-    const htmlPath = p.html_file ? resolveDataPath(p.html_file) : "";
-    snakeActions.innerHTML = htmlPath
-      ? `
-        <a class="btn btn-outline btn-sm" href="${escapeHtml(htmlPath)}" target="_blank" rel="noopener">🐍 Open Snake Flashcard</a>
-        <a class="btn btn-ghost btn-sm" href="${escapeHtml(htmlPath)}" download>⬇ Download HTML</a>
-      `
-      : "";
-  }
-
-  function renderStepControls() {
-    const total = (state.currentProblem?.steps || []).length;
-    if (!state.study.stepMode) {
-      stepControls.classList.add("hidden");
-      return;
+    const links = [];
+    if (problem.doi) {
+      links.push(`<a class="btn btn-ghost" href="https://doi.org/${encodeURIComponent(problem.doi)}" target="_blank" rel="noopener">DOI</a>`);
     }
-    stepControls.classList.remove("hidden");
-    stepCounter.textContent = `Step ${state.study.revealedStep} / ${total}`;
-    prevStepBtn.disabled = state.study.revealedStep <= 0;
-    nextStepBtn.disabled = state.study.revealedStep >= total;
+    if (problem.pdf_url) {
+      links.push(`<a class="btn btn-ghost" href="${escapeHtml(problem.pdf_url)}" target="_blank" rel="noopener">PDF</a>`);
+    }
+    els.problemLinks.innerHTML = links.join("");
+
+    if (entry.html_file) {
+      els.btnSnakeHtml.href = "data/" + entry.html_file;
+      els.btnSnakeHtml.classList.remove("hidden");
+    } else {
+      els.btnSnakeHtml.classList.add("hidden");
+    }
+
+    updateActionButtons();
+    renderSnakeBoard(problem);
   }
 
-  function renderSynthesisSequence() {
-    const p = state.currentProblem;
-    if (!p) return;
+  function renderSnakeBoard(problem) {
+    const steps = problem.steps || [];
+    const rows = [];
 
-    const steps = p.steps || [];
-    const maxVisibleStep = state.study.stepMode ? state.study.revealedStep : steps.length;
-
-    let html = `
-      <div class="mol-card">
-        <div class="mol-card-header">
-          <span class="mol-label">Starting Material</span>
-        </div>
-        <div class="svg-frame">
-          ${p.start_svg || `<span class="muted">SMILES: ${escapeHtml(p.start_smiles || "N/A")}</span>`}
-        </div>
-        ${
-          p.start_smiles
-            ? `<div class="smiles-row"><span>${escapeHtml(p.start_smiles)}</span><button type="button" class="btn btn-ghost btn-sm" data-copy="${escapeHtml(p.start_smiles)}">Copy</button></div>`
-            : ""
-        }
-      </div>
-    `;
-
-    steps.forEach((step, idx) => {
-      const stepNum = step.step_index ?? idx + 1;
-      if (idx + 1 > maxVisibleStep) {
-        return;
-      }
-
-      const hideReag = state.study.hideReagents && !state.study.revealedReagents.has(stepNum);
-      const hideProd = state.study.hideProducts && !state.study.revealedProducts.has(stepNum);
-
-      html += `
-        <div class="step-row">
-          <div class="reaction-box">
-            <div class="step-header">
-              <span class="step-badge">Step ${stepNum}</span>
-              ${step.yield ? `<span class="yield-badge">${escapeHtml(step.yield)}</span>` : ""}
-            </div>
-            ${
-              hideReag
-                ? `<div class="flashcard-cover" data-reveal-reagent="${stepNum}">
-                     <span>🧪 Reagents &amp; Conditions Hidden</span>
-                     <span class="muted">Click to reveal</span>
-                   </div>`
-                : `
-                   ${step.named_reaction ? `<div class="named-rxn">${escapeHtml(step.named_reaction)}</div>` : ""}
-                   <div class="reagents-text">${escapeHtml(step.reagents || "—")}</div>
-                   ${step.conditions ? `<div class="conditions-text">${escapeHtml(step.conditions)}</div>` : ""}
-                   ${step.notes ? `<div class="notes-text">${escapeHtml(step.notes)}</div>` : ""}
-                  `
-            }
-          </div>
-
-          <div class="mol-card">
-            <div class="mol-card-header">
-              <span class="mol-label">${idx === steps.length - 1 ? `Target: ${escapeHtml(p.target_molecule || "Final Product")}` : `Intermediate ${stepNum}`}</span>
-            </div>
-            ${
-              hideProd
-                ? `<div class="flashcard-cover" data-reveal-product="${stepNum}">
-                     <span>⬡ Product Structure Hidden</span>
-                     <span class="muted">Click to reveal</span>
-                   </div>`
-                : `
-                   <div class="svg-frame">
-                     ${step.product_svg || `<span class="muted">SMILES: ${escapeHtml(step.product_smiles || "N/A")}</span>`}
-                   </div>
-                   ${
-                     step.product_smiles
-                       ? `<div class="smiles-row"><span>${escapeHtml(step.product_smiles)}</span><button type="button" class="btn btn-ghost btn-sm" data-copy="${escapeHtml(step.product_smiles)}">Copy</button></div>`
-                       : ""
-                   }
-                  `
-            }
-          </div>
+    const makeMolCard = (visualHtml, isStart, stepIndex) => {
+      const cls = isStart ? "mol-card start-card" : "mol-card product-card";
+      const badge = isStart ? "Starting Material" : `Intermediate ${stepIndex}`;
+      return `
+        <div class="${cls}" ${isStart ? "" : 'data-toggle="1"'}>
+          <div class="mol-badge">${badge}</div>
+          <div class="mol-visual">${visualHtml}</div>
         </div>
       `;
-    });
-
-    if (state.study.stepMode && maxVisibleStep < steps.length) {
-      html += `
-        <div class="card" style="padding: 18px; text-align: center;">
-          <p class="muted" style="margin: 0 0 10px;">${steps.length - maxVisibleStep} step(s) remaining</p>
-          <button type="button" class="btn btn-primary" id="inline-next-step">Reveal Step ${maxVisibleStep + 1} →</button>
-        </div>
-      `;
-    }
-
-    synthesisSequence.innerHTML = html;
-  }
-
-  // Event listeners for solver
-  synthesisSequence.addEventListener("click", (e) => {
-    const reagCover = e.target.closest("[data-reveal-reagent]");
-    if (reagCover) {
-      state.study.revealedReagents.add(Number(reagCover.getAttribute("data-reveal-reagent")));
-      renderSynthesisSequence();
-      return;
-    }
-
-    const prodCover = e.target.closest("[data-reveal-product]");
-    if (prodCover) {
-      state.study.revealedProducts.add(Number(prodCover.getAttribute("data-reveal-product")));
-      renderSynthesisSequence();
-      return;
-    }
-
-    const copyBtn = e.target.closest("[data-copy]");
-    if (copyBtn) {
-      const text = copyBtn.getAttribute("data-copy");
-      navigator.clipboard?.writeText(text).then(() => {
-        copyBtn.textContent = "Copied!";
-        setTimeout(() => (copyBtn.textContent = "Copy"), 1200);
-      });
-      return;
-    }
-
-    if (e.target.id === "inline-next-step") {
-      state.study.revealedStep += 1;
-      renderStepControls();
-      renderSynthesisSequence();
-    }
-  });
-
-  document.querySelectorAll(".seg-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      if (!state.currentProblem) return;
-      setProblemStatus(state.currentProblem.id, btn.getAttribute("data-status"));
-      renderSolverHeader();
-    });
-  });
-
-  solverBookmarkBtn.addEventListener("click", () => {
-    if (!state.currentProblem) return;
-    toggleBookmark(state.currentProblem.id);
-    renderSolverHeader();
-  });
-
-  toggleHideReagents.addEventListener("change", () => {
-    state.study.hideReagents = toggleHideReagents.checked;
-    state.study.revealedReagents.clear();
-    renderSynthesisSequence();
-  });
-
-  toggleHideProducts.addEventListener("change", () => {
-    state.study.hideProducts = toggleHideProducts.checked;
-    state.study.revealedProducts.clear();
-    renderSynthesisSequence();
-  });
-
-  toggleStepMode.addEventListener("change", () => {
-    state.study.stepMode = toggleStepMode.checked;
-    const total = (state.currentProblem?.steps || []).length;
-    state.study.revealedStep = state.study.stepMode ? 0 : total;
-    renderStepControls();
-    renderSynthesisSequence();
-  });
-
-  prevStepBtn.addEventListener("click", () => {
-    if (state.study.revealedStep > 0) {
-      state.study.revealedStep -= 1;
-      renderStepControls();
-      renderSynthesisSequence();
-    }
-  });
-
-  nextStepBtn.addEventListener("click", () => {
-    const total = (state.currentProblem?.steps || []).length;
-    if (state.study.revealedStep < total) {
-      state.study.revealedStep += 1;
-      renderStepControls();
-      renderSynthesisSequence();
-    }
-  });
-
-  revealAllBtn.addEventListener("click", () => {
-    const total = (state.currentProblem?.steps || []).length;
-    state.study.revealedStep = total;
-    state.study.revealedReagents.clear();
-    state.study.revealedProducts.clear();
-    toggleHideReagents.checked = false;
-    toggleHideProducts.checked = false;
-    state.study.hideReagents = false;
-    state.study.hideProducts = false;
-    renderStepControls();
-    renderSynthesisSequence();
-  });
-
-  backToCatalogBtn.addEventListener("click", () => {
-    window.location.hash = "#/";
-  });
-
-  // Catalog filter listeners
-  searchInput.addEventListener("input", () => {
-    state.filters.search = searchInput.value;
-    renderCatalog();
-  });
-  sortSelect.addEventListener("change", () => {
-    state.filters.sort = sortSelect.value;
-    renderCatalog();
-  });
-  filterDifficulty.addEventListener("change", () => {
-    state.filters.difficulty = filterDifficulty.value;
-    renderCatalog();
-  });
-  filterJournal.addEventListener("change", () => {
-    state.filters.journal = filterJournal.value;
-    renderCatalog();
-  });
-  filterYear.addEventListener("change", () => {
-    state.filters.year = filterYear.value;
-    renderCatalog();
-  });
-  filterStatus.addEventListener("change", () => {
-    state.filters.status = filterStatus.value;
-    renderCatalog();
-  });
-
-  function resetFilters() {
-    state.filters = {
-      search: "",
-      difficulty: "all",
-      journal: "all",
-      year: "all",
-      status: "all",
-      sort: "newest",
     };
-    searchInput.value = "";
-    sortSelect.value = "newest";
-    filterDifficulty.value = "all";
-    filterJournal.value = "all";
-    filterYear.value = "all";
-    filterStatus.value = "all";
+
+    const makeArrow = (step, dir) => {
+      const conds = [step.conditions, step.yield].filter(Boolean).map(escapeHtml).join(" · ");
+      const arrow = dir === "ltr" ? "&#8594;" : "&#8592;";
+      return `
+        <div class="step-arrow" title="${escapeHtml(step.notes || "")}">
+          <div class="reagent-box" data-toggle="1">
+            <span class="step-badge">Step ${step.step_index}</span>
+            ${step.named_reaction ? `<div class="named-rxn">${escapeHtml(step.named_reaction)}</div>` : ""}
+            <div class="reagents-text">${escapeHtml(step.reagents || "—")}</div>
+            ${conds ? `<div class="cond-text">${conds}</div>` : ""}
+          </div>
+          <div class="arrow-line">${arrow}</div>
+        </div>
+      `;
+    };
+
+    const startVis = renderVisualHtml(problem.start_image, problem.start_svg, "Starting Material");
+    if (steps.length === 0) {
+      rows.push(`<div class="snake-row-wrap"><div class="snake-row ltr">${makeMolCard(startVis, true, 0)}</div></div>`);
+    } else {
+      const numRows = Math.ceil(steps.length / STEPS_PER_ROW);
+      for (let r = 0; r < numRows; r++) {
+        const chunk = steps.slice(r * STEPS_PER_ROW, (r + 1) * STEPS_PER_ROW);
+        const dir = r % 2 === 0 ? "ltr" : "rtl";
+        const items = [];
+        if (r === 0) items.push(makeMolCard(startVis, true, 0));
+        chunk.forEach(st => {
+          const pVis = renderVisualHtml(st.product_image, st.product_svg, `Step ${st.step_index}`);
+          items.push(makeArrow(st, dir));
+          items.push(makeMolCard(pVis, false, st.step_index));
+        });
+        if (dir === "rtl") items.reverse();
+        rows.push(`<div class="snake-row-wrap"><div class="snake-row ${dir}">${items.join("")}</div></div>`);
+        if (r < numRows - 1) {
+          const turnCls = dir === "ltr" ? "turn-right" : "turn-left";
+          rows.push(`<div class="snake-turn ${turnCls}">&#8595;</div>`);
+        }
+      }
+    }
+
+    els.snakeBoard.innerHTML = rows.join("");
+    els.snakeBoard.querySelectorAll('[data-toggle="1"]').forEach(el => {
+      el.addEventListener("click", () => el.classList.toggle("is-hidden"));
+    });
+  }
+
+  function updateActionButtons() {
+    if (!state.currentEntry) return;
+    const st = getStatus(state.currentEntry.id);
+    els.btnMarkSolved.textContent = st.solved ? "Solved ✓" : "Mark Solved";
+    els.btnBookmark.textContent = st.bookmarked ? "Bookmarked ★" : "Bookmark";
+    els.btnHideReagents.classList.toggle("active", state.hideReagents);
+    els.btnHideProducts.classList.toggle("active", state.hideProducts);
+  }
+
+  function showCatalogView() {
+    els.problemView.classList.add("hidden");
+    els.catalogView.classList.remove("hidden");
     renderCatalog();
   }
 
-  resetFiltersBtn.addEventListener("click", resetFilters);
-  emptyResetBtn.addEventListener("click", resetFilters);
-
-  // Hash router
   function handleRoute() {
     const hash = window.location.hash || "#/";
     const match = hash.match(/^#\/problem\/(.+)$/);
     if (match) {
       openProblem(decodeURIComponent(match[1]));
     } else {
-      state.currentProblem = null;
-      solverView.classList.add("hidden");
-      catalogView.classList.remove("hidden");
-      renderCatalog();
+      showCatalogView();
     }
   }
 
-  window.addEventListener("hashchange", handleRoute);
+  function bindEvents() {
+    [els.searchInput, els.difficultyFilter, els.journalFilter, els.progressFilter].forEach(el => {
+      el.addEventListener("input", renderCatalog);
+      el.addEventListener("change", renderCatalog);
+    });
 
-  // Boot
-  async function init() {
-    initTheme();
-    try {
-      const res = await fetch("data/catalog.json");
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      state.catalog = data.problems || [];
-      state.generatedAt = data.generated_at || null;
-      populateFilterOptions();
-      renderStatsPills();
-      handleRoute();
-    } catch (err) {
-      resultsCount.textContent = `Error loading catalog: ${err.message}`;
-    }
+    els.backToCatalog.addEventListener("click", () => {
+      window.location.hash = "#/";
+    });
+
+    els.btnHideReagents.addEventListener("click", () => {
+      state.hideReagents = !state.hideReagents;
+      els.snakeBoard.querySelectorAll(".reagent-box").forEach(el => el.classList.toggle("is-hidden", state.hideReagents));
+      updateActionButtons();
+    });
+
+    els.btnHideProducts.addEventListener("click", () => {
+      state.hideProducts = !state.hideProducts;
+      els.snakeBoard.querySelectorAll(".product-card").forEach(el => el.classList.toggle("is-hidden", state.hideProducts));
+      updateActionButtons();
+    });
+
+    els.btnStepByStep.addEventListener("click", () => {
+      state.hideReagents = true;
+      state.hideProducts = true;
+      els.snakeBoard.querySelectorAll(".reagent-box, .product-card").forEach(el => el.classList.add("is-hidden"));
+      updateActionButtons();
+    });
+
+    els.btnRevealAll.addEventListener("click", () => {
+      state.hideReagents = false;
+      state.hideProducts = false;
+      els.snakeBoard.querySelectorAll(".is-hidden").forEach(el => el.classList.remove("is-hidden"));
+      updateActionButtons();
+    });
+
+    els.btnMarkSolved.addEventListener("click", () => {
+      if (!state.currentEntry) return;
+      const id = state.currentEntry.id;
+      const cur = getStatus(id);
+      state.progress[id] = { ...cur, solved: !cur.solved };
+      saveProgress();
+      updateActionButtons();
+    });
+
+    els.btnBookmark.addEventListener("click", () => {
+      if (!state.currentEntry) return;
+      const id = state.currentEntry.id;
+      const cur = getStatus(id);
+      state.progress[id] = { ...cur, bookmarked: !cur.bookmarked };
+      saveProgress();
+      updateActionButtons();
+    });
+
+    window.addEventListener("hashchange", handleRoute);
   }
 
-  init();
+  initTheme();
+  bindEvents();
+  loadCatalog();
 })();

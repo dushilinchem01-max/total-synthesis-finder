@@ -83,7 +83,8 @@ def run_pipeline(
     existing_entries, known_dois = load_catalog(catalog_path)
 
     llm = MultiProviderLLM()
-    if not llm.available_text_providers() and not llm.gemini:
+    has_text_llm = llm.groq.is_configured or llm.nvidia.is_configured or llm.gemini.is_configured
+    if not has_text_llm:
         logger.warning("No LLM API keys configured (GEMINI_API_KEY / GROQ_API_KEY / NVIDIA_API_KEY). Exiting cleanly.")
         return []
 
@@ -113,7 +114,7 @@ def run_pipeline(
             if not h_res.passed:
                 continue
 
-            if use_llm_screening and llm.available_text_providers():
+            if use_llm_screening and has_text_llm:
                 try:
                     if not is_total_synthesis_candidate(article.title, article.abstract, llm=llm):
                         logger.info("LLM screening rejected: %s", article.title)
@@ -126,7 +127,7 @@ def run_pipeline(
                 logger.info("No open-access PDF for %s (%s)", article.title, doi_norm)
                 continue
 
-            if not llm.gemini:
+            if not llm.gemini.is_configured:
                 logger.warning("GEMINI_API_KEY is required for multimodal PDF extraction; skipping %s", article.title)
                 continue
 

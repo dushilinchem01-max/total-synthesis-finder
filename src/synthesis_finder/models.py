@@ -24,6 +24,7 @@ class SynthesisStep:
     named_reaction: str = ""
     product_smiles: str = ""
     product_svg: str = ""
+    product_image: str = ""
     notes: str = ""
 
     def to_dict(self) -> dict[str, Any]:
@@ -36,6 +37,7 @@ class SynthesisStep:
             "named_reaction": self.named_reaction,
             "product_smiles": self.product_smiles,
             "product_svg": self.product_svg,
+            "product_image": self.product_image,
             "notes": self.notes,
         }
 
@@ -53,6 +55,7 @@ class SynthesisStep:
             named_reaction=str(data.get("named_reaction") or ""),
             product_smiles=str(data.get("product_smiles") or ""),
             product_svg=str(data.get("product_svg") or ""),
+            product_image=str(data.get("product_image") or ""),
             notes=str(data.get("notes") or ""),
         )
 
@@ -72,6 +75,7 @@ class SynthesisProblem:
     source_url: str = ""
     start_smiles: str = ""
     start_svg: str = ""
+    start_image: str = ""
     steps: list[SynthesisStep] = field(default_factory=list)
     created_at: str = field(default_factory=now_iso)
 
@@ -89,6 +93,7 @@ class SynthesisProblem:
             "source_url": self.source_url,
             "start_smiles": self.start_smiles,
             "start_svg": self.start_svg,
+            "start_image": self.start_image,
             "steps": [step.to_dict() for step in self.steps],
             "created_at": self.created_at,
         }
@@ -124,6 +129,7 @@ class SynthesisProblem:
             source_url=str(data.get("source_url") or ""),
             start_smiles=str(data.get("start_smiles") or ""),
             start_svg=str(data.get("start_svg") or ""),
+            start_image=str(data.get("start_image") or ""),
             steps=steps,
             created_at=str(data.get("created_at") or now_iso()),
         )
