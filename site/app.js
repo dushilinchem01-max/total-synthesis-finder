@@ -273,12 +273,13 @@
       label: "Aldol & Enolate",
       type: "spiral",
       typeLabel: "Spiral Galaxy",
-      rx: 0.20,
-      ry: 0.30,
-      rz: 24,
+      rx: 0.43,
+      ry: 0.25,
+      rz: 48,
+      scaleMul: 1.06,
       tiltX: 0.58,
       tiltY: -0.22,
-      spinSpeed: 0.0020,
+      spinSpeed: 0.09,
       color: "#a3e635",
       lightColor: "#15803d",
       stars: [
@@ -301,12 +302,13 @@
       label: "[2+2] & Photochem",
       type: "ring",
       typeLabel: "Ring Galaxy",
-      rx: 0.50,
-      ry: 0.25,
-      rz: -32,
-      tiltX: 0.72,
-      tiltY: 0.24,
-      spinSpeed: -0.0016,
+      rx: 0.67,
+      ry: 0.19,
+      rz: -65,
+      scaleMul: 0.94,
+      tiltX: 0.78,
+      tiltY: 0.28,
+      spinSpeed: -0.075,
       color: "#38bdf8",
       lightColor: "#1d4ed8",
       stars: [
@@ -327,12 +329,13 @@
       label: "Cross-Coupling",
       type: "barred",
       typeLabel: "Barred Spiral",
-      rx: 0.80,
-      ry: 0.31,
-      rz: 18,
-      tiltX: 0.48,
-      tiltY: -0.28,
-      spinSpeed: 0.0018,
+      rx: 0.87,
+      ry: 0.37,
+      rz: 22,
+      scaleMul: 0.98,
+      tiltX: 0.44,
+      tiltY: -0.34,
+      spinSpeed: 0.085,
       color: "#f472b6",
       lightColor: "#be185d",
       stars: [
@@ -354,12 +357,13 @@
       label: "Pericyclic",
       type: "elliptical",
       typeLabel: "Elliptical Galaxy",
-      rx: 0.27,
-      ry: 0.72,
-      rz: -14,
-      tiltX: 0.38,
-      tiltY: 0.35,
-      spinSpeed: 0.0010,
+      rx: 0.56,
+      ry: 0.57,
+      rz: 78,
+      scaleMul: 1.08,
+      tiltX: 0.36,
+      tiltY: 0.38,
+      spinSpeed: 0.05,
       color: "#fbbf24",
       lightColor: "#b45309",
       stars: [
@@ -380,12 +384,13 @@
       label: "Radical & Electro",
       type: "multiarm",
       typeLabel: "Multi-Arm Spiral",
-      rx: 0.56,
-      ry: 0.74,
-      rz: 30,
-      tiltX: 0.52,
-      tiltY: 0.16,
-      spinSpeed: -0.0021,
+      rx: 0.40,
+      ry: 0.78,
+      rz: -42,
+      scaleMul: 0.92,
+      tiltX: 0.55,
+      tiltY: 0.19,
+      spinSpeed: -0.095,
       color: "#c084fc",
       lightColor: "#7e22ce",
       stars: [
@@ -406,12 +411,13 @@
       label: "Oxidation / Red",
       type: "lenticular",
       typeLabel: "Lenticular Galaxy",
-      rx: 0.82,
-      ry: 0.70,
-      rz: -22,
-      tiltX: 1.12,
-      tiltY: -0.32,
-      spinSpeed: 0.0015,
+      rx: 0.80,
+      ry: 0.77,
+      rz: -18,
+      scaleMul: 1.0,
+      tiltX: 1.08,
+      tiltY: -0.30,
+      spinSpeed: 0.07,
       color: "#2dd4bf",
       lightColor: "#0f766e",
       stars: [
@@ -904,7 +910,9 @@
           glyph,
           isCore,
           phase: rng() * Math.PI * 2,
-          freq: 0.7 + rng() * 0.9,
+          breathFreq: 0.22 + rng() * 0.34,
+          twinklePeriod: 7.5 + rng() * 11.5,
+          twinklePhase: rng() * Math.PI * 2,
           namedLabel: reactionName,
         });
       }
@@ -913,12 +921,14 @@
     }
 
     const bgRng = createRng(99173);
-    const bgStars = Array.from({ length: 65 }, () => ({
+    const bgStars = Array.from({ length: 95 }, () => ({
       rx: bgRng() * 2 - 1,
       ry: bgRng() * 2 - 1,
       rz: -160 + bgRng() * 320,
-      size: bgRng() > 0.7 ? 1.5 : 1,
+      size: 0.7 + bgRng() * 0.9,
+      baseAlpha: 0.14 + bgRng() * 0.24,
       phase: bgRng() * Math.PI * 2,
+      freq: 0.18 + bgRng() * 0.32,
     }));
 
     const galaxyData = GALAXIES.map((g, gi) => ({
@@ -931,7 +941,6 @@
 
     let width = 0;
     let height = 0;
-    let tick = 0;
     let targetTiltX = 0;
     let targetTiltY = 0;
     let camTiltX = 0;
@@ -943,22 +952,39 @@
     function resize() {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       width = canvas.clientWidth || 720;
-      height = canvas.clientHeight || 440;
+      height = canvas.clientHeight || 460;
       canvas.width = Math.round(width * dpr);
       canvas.height = Math.round(height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
-    function drawStarGlyph(x, y, size, glyph, color, twinkle, alpha) {
-      ctx.globalAlpha = Math.max(0.06, Math.min(1, alpha));
+    function drawStarGlyph(x, y, size, glyph, color, flare, alpha) {
+      const clampedAlpha = Math.max(0.06, Math.min(1, alpha));
+      ctx.save();
       ctx.fillStyle = color;
 
-      if (glyph === "pin" && !twinkle) {
+      // Soft luminous halo during smooth twinkle flare
+      if (flare > 0.08) {
+        const haloR = Math.max(4, size * (2.6 + flare * 3.2));
+        const halo = ctx.createRadialGradient(x, y, 0, x, y, haloR);
+        halo.addColorStop(0, color);
+        halo.addColorStop(1, "transparent");
+        ctx.globalAlpha = Math.min(0.45, clampedAlpha * flare * 0.42);
+        ctx.fillStyle = halo;
         ctx.beginPath();
-        ctx.arc(x, y, Math.max(0.9, size * 0.65), 0, Math.PI * 2);
+        ctx.arc(x, y, haloR, 0, Math.PI * 2);
         ctx.fill();
-      } else if (glyph === "diamond" && !twinkle) {
-        const r = Math.max(1.4, size * 1.05);
+        ctx.fillStyle = color;
+      }
+
+      ctx.globalAlpha = clampedAlpha;
+
+      if (glyph === "pin") {
+        ctx.beginPath();
+        ctx.arc(x, y, Math.max(0.85, size * 0.65), 0, Math.PI * 2);
+        ctx.fill();
+      } else if (glyph === "diamond") {
+        const r = Math.max(1.3, size * 1.02);
         ctx.beginPath();
         ctx.moveTo(x, y - r);
         ctx.lineTo(x + r, y);
@@ -967,8 +993,8 @@
         ctx.closePath();
         ctx.fill();
       } else {
-        // Perfectly symmetric 4-point sparkle
-        const r = Math.max(2.1, size * (twinkle ? 1.85 : 1.45));
+        // Gentle 4-point star
+        const r = Math.max(1.8, size * 1.32);
         ctx.beginPath();
         ctx.moveTo(x, y - r);
         ctx.quadraticCurveTo(x, y, x + r, y);
@@ -977,34 +1003,53 @@
         ctx.quadraticCurveTo(x, y, x, y - r);
         ctx.closePath();
         ctx.fill();
-        // Tiny symmetric core dot
+      }
+
+      // Smoothly blooming 4-point twinkle rays (no abrupt pop)
+      if (flare > 0.06) {
+        const rayR = Math.max(2.2, size * (1.2 + flare * 2.25));
+        ctx.globalAlpha = Math.min(0.95, clampedAlpha * (0.25 + flare * 0.75));
         ctx.beginPath();
-        ctx.arc(x, y, Math.max(0.75, r * 0.2), 0, Math.PI * 2);
+        ctx.moveTo(x, y - rayR);
+        ctx.quadraticCurveTo(x, y, x + rayR, y);
+        ctx.quadraticCurveTo(x, y, x, y + rayR);
+        ctx.quadraticCurveTo(x, y, x - rayR, y);
+        ctx.quadraticCurveTo(x, y, x, y - rayR);
+        ctx.closePath();
+        ctx.fill();
+
+        // Crisp bright core dot
+        ctx.globalAlpha = Math.min(1, clampedAlpha + flare * 0.25);
+        ctx.beginPath();
+        ctx.arc(x, y, Math.max(0.75, size * (0.45 + flare * 0.25)), 0, Math.PI * 2);
         ctx.fill();
       }
-      ctx.globalAlpha = 1;
+
+      ctx.restore();
     }
 
-    function frame() {
-      tick++;
-      camTiltX += (targetTiltX - camTiltX) * 0.08;
-      camTiltY += (targetTiltY - camTiltY) * 0.08;
+    function frame(ts) {
+      const now = (ts || performance.now()) * 0.001;
+      camTiltX += (targetTiltX - camTiltX) * 0.07;
+      camTiltY += (targetTiltY - camTiltY) * 0.07;
 
       ctx.clearRect(0, 0, width, height);
       const light = document.documentElement.getAttribute("data-theme") === "light";
       const halfW = width * 0.5;
       const halfH = height * 0.5;
       const focal = 640;
+      const isCompact = window.innerWidth <= 960;
 
-      // Subtle background starfield with 3D parallax
+      // Calm, deep background starfield with 3D parallax
       const bgColor = light ? "#64748b" : "#94a3b8";
       bgStars.forEach(bs => {
-        const p = rotate3D(bs.rx * halfW * 1.1, bs.ry * halfH * 1.1, bs.rz, camTiltX * 0.65, camTiltY * 0.65);
+        const p = rotate3D(bs.rx * halfW * 1.15, bs.ry * halfH * 1.15, bs.rz, camTiltX * 0.65, camTiltY * 0.65);
         const scale = focal / (focal + p.z);
         const sx = halfW + p.x * scale;
         const sy = halfH + p.y * scale;
-        const tw = 0.16 + 0.12 * Math.sin(tick * 0.04 + bs.phase);
-        drawStarGlyph(sx, sy, bs.size * 0.75, "pin", bgColor, false, tw);
+        const wave = 0.5 + 0.5 * Math.sin(now * bs.freq + bs.phase);
+        const tw = bs.baseAlpha * (0.55 + 0.65 * wave);
+        drawStarGlyph(sx, sy, bs.size * 0.78, "pin", bgColor, wave * 0.15, tw);
       });
 
       const drawList = [];
@@ -1017,7 +1062,8 @@
         const baseColor = light ? g.lightColor : g.color;
         const coreColor = light ? g.lightColor : "#f8fafc";
 
-        const gx0 = (g.rx - 0.5) * width;
+        const effectiveRx = isCompact ? 0.16 + ((g.rx - 0.38) / 0.51) * 0.68 : g.rx;
+        const gx0 = (effectiveRx - 0.5) * width;
         const gy0 = (g.ry - 0.5) * height;
         const gz0 = g.rz;
         const gCam = rotate3D(gx0, gy0, gz0, camTiltX, camTiltY);
@@ -1027,9 +1073,10 @@
         gd.projScale = gScale;
 
         // Soft nebula / bulge glow per galaxy
-        const glowRadius = 56 * gScale;
+        const mul = g.scaleMul || 1;
+        const glowRadius = 64 * gScale * mul;
         const grad = ctx.createRadialGradient(gd.projCx, gd.projCy, 2, gd.projCx, gd.projCy, glowRadius);
-        const glowAlpha = isHoveredGal ? (light ? 0.14 : 0.18) : (light ? 0.07 : 0.09);
+        const glowAlpha = isHoveredGal ? (light ? 0.15 : 0.20) : (light ? 0.07 : 0.10);
         ctx.save();
         ctx.globalAlpha = (state.activeGalaxy && !isActiveGal && !isHoveredGal) ? glowAlpha * 0.4 : glowAlpha;
         grad.addColorStop(0, baseColor);
@@ -1040,20 +1087,20 @@
         ctx.fill();
         ctx.restore();
 
-        const spin = tick * g.spinSpeed;
+        const spin = now * g.spinSpeed;
         const cosSpin = Math.cos(spin);
         const sinSpin = Math.sin(spin);
 
         gd.stars.forEach(st => {
           // Local spin around galaxy's own Z axis
-          const sx0 = st.lx * cosSpin - st.ly * sinSpin;
-          const sy0 = st.lx * sinSpin + st.ly * cosSpin;
-          const sz0 = st.lz;
+          const sx0 = (st.lx * cosSpin - st.ly * sinSpin) * mul;
+          const sy0 = (st.lx * sinSpin + st.ly * cosSpin) * mul;
+          const sz0 = st.lz * mul;
 
           // Apply galaxy's own 3D inclination
           const tilted = rotate3D(sx0, sy0, sz0, g.tiltX, g.tiltY);
 
-          // Translate to galaxy world coordinates & apply global OpenRouter-like 3D camera tilt
+          // Translate to galaxy world coordinates & apply global 3D camera tilt
           const wx = gx0 + tilted.x;
           const wy = gy0 + tilted.y;
           const wz = gz0 + tilted.z;
@@ -1062,28 +1109,28 @@
           const px = halfW + camP.x * scale;
           const py = halfH + camP.y * scale;
 
-          const depthFade = Math.max(0.45, Math.min(1.1, scale));
+          const depthFade = Math.max(0.45, Math.min(1.12, scale));
           const isThisStarHover = hoveredStar && hoveredStar.star === st;
 
-          // Ambient sine-pulse breathing ("soft breathing") across all stars
-          const breathT = tick * 0.04;
-          const breath = 0.5
-            + 0.25 * Math.sin(breathT * 1.1 * st.freq + st.phase)
-            + 0.25 * Math.sin(breathT * 2.3 + st.phase * 1.7);
-          const breathAlpha = 0.35 + breath * 0.75;
-          const breathSize = 0.85 + breath * 0.45;
-          const twinkle = Boolean(isThisStarHover || breath > (isHoveredGal ? 0.82 : 0.88));
-          const boost = isThisStarHover ? 1.5 : (isHoveredGal ? 1.2 : (isActiveGal ? 1.15 : 1));
-          const dimOther = (state.activeGalaxy && !isActiveGal && !isHoveredGal) ? 0.58 : 1;
+          // Slow, smooth breathing + rare, silky bell-curve twinkle flares
+          const breath = 0.5 + 0.5 * Math.sin(now * st.breathFreq + st.phase);
+          const rawTwinkle = 0.5 + 0.5 * Math.sin((now / st.twinklePeriod) * Math.PI * 2 + st.twinklePhase);
+          const smoothFlare = Math.pow(rawTwinkle, 8);
+          const flare = isThisStarHover ? Math.max(smoothFlare, 0.95) : (isHoveredGal ? Math.min(1, smoothFlare * 1.25 + 0.12) : smoothFlare);
+
+          const breathAlpha = 0.58 + breath * 0.28 + flare * 0.34;
+          const breathSize = 0.90 + breath * 0.14 + flare * 0.28;
+          const boost = isThisStarHover ? 1.45 : (isHoveredGal ? 1.18 : (isActiveGal ? 1.14 : 1));
+          const dimOther = (state.activeGalaxy && !isActiveGal && !isHoveredGal) ? 0.52 : 1;
 
           const item = {
             x: px,
             y: py,
             z: camP.z,
-            size: (isThisStarHover ? 3.2 : st.size * scale * breathSize) * (isHoveredGal ? 1.08 : 1),
+            size: (isThisStarHover ? 2.9 : st.size * scale * breathSize) * (isHoveredGal ? 1.06 : 1),
             glyph: isThisStarHover ? "sparkle" : st.glyph,
             color: st.isCore ? coreColor : baseColor,
-            twinkle,
+            flare,
             alpha: st.alpha * depthFade * breathAlpha * boost * dimOther,
           };
           drawList.push(item);
@@ -1098,7 +1145,7 @@
       drawList.sort((a, b) => b.z - a.z);
       for (let i = 0; i < drawList.length; i++) {
         const d = drawList[i];
-        drawStarGlyph(d.x, d.y, d.size, d.glyph, d.color, d.twinkle, d.alpha);
+        drawStarGlyph(d.x, d.y, d.size, d.glyph, d.color, d.flare, d.alpha);
       }
 
       requestAnimationFrame(frame);
