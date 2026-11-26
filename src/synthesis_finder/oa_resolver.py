@@ -7,6 +7,7 @@ import logging
 import os
 from pathlib import Path
 import re
+from typing import Sequence
 from urllib.parse import quote, urlparse
 
 import httpx
@@ -83,10 +84,23 @@ class OAResolver:
         doi: str | None = None,
         url: str | None = None,
         oa_hint: bool | None = None,
+        extra_pdf_urls: Sequence[str] | None = None,
     ) -> OAResolution:
         """Resolve an open-access PDF URL for the given DOI and/or article URL."""
         norm_doi = normalize_doi(doi)
         clean_url = (url or "").strip() or None
+
+        # 0. Caller-supplied OA PDF URLs (e.g. from OpenAlex locations)
+        for cand_url in extra_pdf_urls or ():
+            cand = (cand_url or "").strip()
+            if cand and self._accept_pdf_url(cand):
+                return OAResolution(
+                    doi=norm_doi,
+                    pdf_url=cand,
+                    source="openalex",
+                    is_oa=True,
+                    landing_url=clean_url or cand,
+                )
 
         # 1. Direct PDF URL
         if clean_url and _looks_like_pdf_url(clean_url):

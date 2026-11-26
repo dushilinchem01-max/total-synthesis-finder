@@ -6,10 +6,39 @@ on:
     - cron: "0 */12 * * *"
   workflow_dispatch:
     inputs:
+      action:
+        description: "Admin action to run"
+        required: false
+        default: "update"
+        type: choice
+        options:
+          - update
+          - delete
+          - delete_all
+      period_days:
+        description: "Lookback period in days (used if date_from is empty)"
+        required: false
+        default: "30"
+        type: string
+      date_from:
+        description: "Custom start date (YYYY-MM-DD, optional)"
+        required: false
+        default: ""
+        type: string
+      date_to:
+        description: "Custom end date (YYYY-MM-DD, optional)"
+        required: false
+        default: ""
+        type: string
       max_articles:
         description: "Maximum number of new articles to process"
         required: false
         default: "5"
+        type: string
+      delete_ids:
+        description: "Comma-separated problem IDs to delete (when action=delete)"
+        required: false
+        default: ""
         type: string
   push:
     branches:
@@ -46,24 +75,41 @@ jobs:
       - name: Run tests
         run: uv run pytest
 
-      - name: Run synthesis finder pipeline
+      - name: Run synthesis finder pipeline or admin delete
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
           UNPAYWALL_EMAIL: ${{ secrets.UNPAYWALL_EMAIL }}
+          ACTION: ${{ inputs.action || 'update' }}
+          PERIOD_DAYS: ${{ inputs.period_days || '30' }}
+          DATE_FROM: ${{ inputs.date_from || '' }}
+          DATE_TO: ${{ inputs.date_to || '' }}
+          MAX_ARTICLES: ${{ inputs.max_articles || '5' }}
+          DELETE_IDS: ${{ inputs.delete_ids || '' }}
         run: |
-          uv run python -m synthesis_finder.pipeline \
-            --max-articles "${{ inputs.max_articles || '5' }}" \
-            --out-dir site/data
+          if [ "$ACTION" = "delete_all" ]; then
+            uv run python -m synthesis_finder.pipeline --out-dir site/data --delete-all
+          elif [ "$ACTION" = "delete" ]; then
+            uv run python -m synthesis_finder.pipeline --out-dir site/data --delete-ids "$DELETE_IDS"
+          else
+            ARGS=(--out-dir site/data --max-articles "$MAX_ARTICLES" --period-days "$PERIOD_DAYS")
+            if [ -n "$DATE_FROM" ]; then
+              ARGS+=(--date-from "$DATE_FROM")
+            fi
+            if [ -n "$DATE_TO" ]; then
+              ARGS+=(--date-to "$DATE_TO")
+            fi
+            uv run python -m synthesis_finder.pipeline "${ARGS[@]}"
+          fi
 
       - name: Commit updated catalog and problems
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add site/data/
+          git add -A site/data/
           if git diff --staged --quiet; then
-            echo "No new synthesis problems to commit."
+            echo "No catalog changes to commit."
           else
             git commit -m "chore(data): update total synthesis catalog [skip ci]"
             git pull --rebase

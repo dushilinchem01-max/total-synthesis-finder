@@ -1193,8 +1193,561 @@
     requestAnimationFrame(frame);
   }
 
-  initTheme();
-  bindEvents();
-  initGalaxyObservatory();
-  loadCatalog();
+  // ---- Auth & Admin Logic ----
+
+  function getAuthToken() {
+    return localStorage.getItem(TOKEN_KEY) || "";
+  }
+
+  function setAuthToken(token) {
+    if (token) localStorage.setItem(TOKEN_KEY, token);
+    else localStorage.removeItem(TOKEN_KEY);
+  }
+
+  function loadLocalUsers() {
+    let users = {};
+    try {
+      users = JSON.parse(localStorage.getItem(LOCAL_USERS_KEY) || "{}");
+    } catch {
+      users = {};
+    }
+    if (!users || typeof users !== "object") users = {};
+    if (!users.admin) {
+      users.admin = {
+        username: "admin",
+        role: "admin",
+        hash: ADMIN_DEFAULT_HASH,
+      };
+      localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(users));
+    }
+    return users;
+  }
+
+  function saveLocalUsers(users) {
+    localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(users));
+  }
+
+  function loadGhConfig() {
+    try {
+      const cfg = JSON.parse(localStorage.getItem(GH_CONFIG_KEY) || "{}");
+      return {
+        repo: (cfg.repo || DEFAULT_GH_REPO).trim(),
+        token: (cfg.token || "").trim(),
+      };
+    } catch {
+      return { repo: DEFAULT_GH_REPO, token: "" };
+    }
+  }
+
+  function saveGhConfig(repo, token) {
+    localStorage.setItem(GH_CONFIG_KEY, JSON.stringify({ repo: repo.trim(), token: token.trim() }));
+  }
+
+  async function apiFetch(url, options = {}) {
+    const headers = { ...(options.headers || {}) };
+    const token = getAuthToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+    if (options.body && !headers["Content-Type"]) {
+      headers["Content-Type"] = "application/json";
+    }
+    const resp = await fetch(url, { ...options, headers });
+    const text = await resp.text();
+    let data = {};
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      data = { error: text };
+    }
+    if (!resp.ok) {
+      throw new Error(data.error || `HTTP ${resp.status}`);
+    }
+    return data;
+  }
+
+  async function detectBackendAndRestoreSession() {
+    try {
+      const health = await apiFetch("/api/health");
+      if (health && health.ok) {
+        state.backendMode = "server";
+        state.serverHealth = health;
+        const me = await apiFetch("/api/auth/me");
+        state.user = me.user || null;
+        state.progress = loadProgress();
+        return;
+      }
+    } catch {
+      // Running as static site (GitHub Pages or http.server)
+    }
+
+    state.backendMode = "static";
+    state.serverHealth = null;
+    loadLocalUsers();
+    try {
+      const sess = JSON.parse(localStorage.getItem(LOCAL_SESSION_KEY) || "null");
+      if (sess && sess.username) {
+        const users = loadLocalUsers();
+        const rec = users[sess.username.toLowerCase()];
+        if (rec) {
+          state.user = { username: rec.username, role: rec.role };
+        }
+      }
+    } catch {
+      state.user = null;
+    }
+    state.progress = loadProgress();
+  }
+
+  function showAuthMessage(text, isError = false) {
+    els.authMessage.textContent = text;
+    els.authMessage.classList.remove("hidden", "is-error", "is-ok");
+    els.authMessage.classList.add(isError ? "is-error" : "is-ok");
+  }
+
+  function clearAuthMessage() {
+    els.authMessage.textContent = "";
+    els.authMessage.classList.add("hidden");
+    els.authMessage.classList.remove("is-error", "is-ok");
+  }
+
+  function setAuthMode(mode) {
+    state.authMode = mode;
+    const isReg = mode === "register";
+    els.tabLogin.classList.toggle("active", !isReg);
+    els.tabRegister.classList.toggle("active", isReg);
+    els.tabLogin.setAttribute("aria-selected", String(!isReg));
+    els.tabRegister.setAttribute("aria-selected", String(isReg));
+    els.authConfirmWrap.classList.toggle("hidden", !isReg);
+    els.authPasswordConfirm.required = isReg;
+    els.authPassword.autocomplete = isReg ? "new-password" : "current-password";
+    els.authSubmitBtn.textContent = isReg ? "Зарегистрироваться" : "Войти";
+    clearAuthMessage();
+  }
+
+  function openAuthModal(mode = "login") {
+    setAuthMode(mode);
+    els.authForm.reset();
+    els.authModal.classList.remove("hidden");
+    els.authUsername.focus();
+  }
+
+  function closeAuthModal() {
+    els.authModal.classList.add("hidden");
+    clearAuthMessage();
+  }
+
+  async function handleAuthSubmit(e) {
+    e.preventDefault();
+    clearAuthMessage();
+    const username = els.authUsername.value.trim();
+    const password = els.authPassword.value;
+    const confirm = els.authPasswordConfirm.value;
+
+    if (!username || !password) {
+      showAuthMessage("Введите логин и пароль.", true);
+      return;
+    }
+    if (state.authMode === "register") {
+      if (!/^[a-zA-Z0-9_.-]{3,32}$/.test(username)) {
+        showAuthMessage("Логин: 3–32 символа (латиница, цифры, _, -, .).", true);
+        return;
+      }
+      if (password.length < 4) {
+        showAuthMessage("Пароль должен быть не короче 4 символов.", true);
+        return;
+      }
+      if (password !== confirm) {
+        showAuthMessage("Пароли не совпадают.", true);
+        return;
+      }
+    }
+
+    els.authSubmitBtn.disabled = true;
+    try {
+      if (state.backendMode === "server") {
+        const endpoint = state.authMode === "register" ? "/api/auth/register" : "/api/auth/login";
+        const res = await apiFetch(endpoint, {
+          method: "POST",
+          body: JSON.stringify({ username, password }),
+        });
+        setAuthToken(res.token);
+        state.user = res.user;
+      } else {
+        const users = loadLocalUsers();
+        const key = username.toLowerCase();
+        const credHash = hashCredential(username, password);
+        if (state.authMode === "register") {
+          if (users[key]) {
+            throw new Error("Пользователь с таким логином уже существует.");
+          }
+          users[key] = { username, role: "user", hash: credHash };
+          saveLocalUsers(users);
+          state.user = { username, role: "user" };
+        } else {
+          const rec = users[key];
+          if (!rec || rec.hash !== credHash) {
+            throw new Error("Неверный логин или пароль.");
+          }
+          state.user = { username: rec.username, role: rec.role };
+        }
+        localStorage.setItem(LOCAL_SESSION_KEY, JSON.stringify(state.user));
+      }
+
+      state.progress = loadProgress();
+      closeAuthModal();
+      renderAuthUI();
+      renderCatalog();
+      if (state.currentProblem && state.currentEntry) {
+        renderProblemView(state.currentProblem, state.currentEntry);
+      }
+    } catch (err) {
+      showAuthMessage(err.message || "Ошибка авторизации.", true);
+    } finally {
+      els.authSubmitBtn.disabled = false;
+    }
+  }
+
+  async function handleLogout() {
+    if (state.backendMode === "server") {
+      try {
+        await apiFetch("/api/auth/logout", { method: "POST", body: "{}" });
+      } catch {
+        // ignore
+      }
+      setAuthToken("");
+    } else {
+      localStorage.removeItem(LOCAL_SESSION_KEY);
+    }
+    if (state.pollTimer) {
+      clearInterval(state.pollTimer);
+      state.pollTimer = null;
+    }
+    state.user = null;
+    state.progress = loadProgress();
+    renderAuthUI();
+    renderCatalog();
+    if (state.currentProblem && state.currentEntry) {
+      renderProblemView(state.currentProblem, state.currentEntry);
+    }
+  }
+
+  function renderAuthUI() {
+    if (!els.authBar) return;
+    if (state.user) {
+      const roleBadge = isAdmin() ? " (admin)" : "";
+      const adminPillCls = isAdmin() ? "user-pill user-pill-admin" : "user-pill";
+      const toggleAdminBtn = isAdmin()
+        ? `<button type="button" class="btn btn-outline" id="btnToggleAdminPanel">${state.adminPanelOpen ? "Скрыть админку" : "Админка"}</button>`
+        : "";
+      els.authBar.innerHTML = `
+        <span class="${adminPillCls}">${escapeHtml(state.user.username)}${roleBadge}</span>
+        ${toggleAdminBtn}
+        <button type="button" class="btn btn-ghost" id="btnLogout">Выйти</button>
+      `;
+      document.getElementById("btnLogout").addEventListener("click", handleLogout);
+      const toggleBtn = document.getElementById("btnToggleAdminPanel");
+      if (toggleBtn) {
+        toggleBtn.addEventListener("click", () => {
+          state.adminPanelOpen = !state.adminPanelOpen;
+          renderAuthUI();
+        });
+      }
+    } else {
+      els.authBar.innerHTML = `
+        <button type="button" class="btn btn-primary" id="btnOpenAuth">Войти / Регистрация</button>
+      `;
+      document.getElementById("btnOpenAuth").addEventListener("click", () => openAuthModal("login"));
+    }
+
+    const showAdmin = isAdmin() && state.adminPanelOpen;
+    if (els.adminPanel) {
+      els.adminPanel.classList.toggle("hidden", !showAdmin);
+    }
+    if (els.btnDeleteCurrentProblem) {
+      els.btnDeleteCurrentProblem.classList.toggle("hidden", !isAdmin());
+    }
+
+    if (isAdmin()) {
+      const isServer = state.backendMode === "server";
+      els.adminModeBadge.textContent = isServer ? "Локальный сервер" : "GitHub Pages";
+      els.ghSettingsBox.classList.toggle("hidden", isServer);
+      els.serverSettingsBox.classList.toggle("hidden", !isServer);
+
+      if (isServer) {
+        const hasGem = Boolean(state.serverHealth && state.serverHealth.has_gemini_key);
+        els.serverKeyHint.textContent = hasGem
+          ? "GEMINI_API_KEY уже задан в окружении сервера."
+          : "GEMINI_API_KEY не найден в окружении сервера — укажите его здесь для извлечения схем из PDF.";
+      } else {
+        const cfg = loadGhConfig();
+        els.adminGhRepo.value = cfg.repo;
+        els.adminGhToken.value = cfg.token;
+      }
+    }
+  }
+
+  function showAdminStatus(title, text, { logs = null, link = null } = {}) {
+    els.adminStatusBox.classList.remove("hidden");
+    els.adminStatusTitle.textContent = title;
+    els.adminStatusText.textContent = text;
+    if (link) {
+      els.adminStatusLink.href = link;
+      els.adminStatusLink.classList.remove("hidden");
+    } else {
+      els.adminStatusLink.classList.add("hidden");
+    }
+    if (Array.isArray(logs) && logs.length > 0) {
+      els.adminStatusLogs.textContent = logs.join("\n");
+      els.adminStatusLogs.classList.remove("hidden");
+      els.adminStatusLogs.scrollTop = els.adminStatusLogs.scrollHeight;
+    } else {
+      els.adminStatusLogs.classList.add("hidden");
+      els.adminStatusLogs.textContent = "";
+    }
+  }
+
+  function syncPeriodInputs() {
+    const isCustom = els.adminPeriodPreset.value === "custom";
+    els.adminDateFromWrap.classList.toggle("hidden", !isCustom);
+    els.adminDateToWrap.classList.toggle("hidden", !isCustom);
+    if (isCustom && !els.adminDateTo.value) {
+      const today = new Date();
+      const monthAgo = new Date(today.getTime() - 30 * 86400 * 1000);
+      els.adminDateTo.value = today.toISOString().slice(0, 10);
+      els.adminDateFrom.value = monthAgo.toISOString().slice(0, 10);
+    }
+  }
+
+  function getSelectedPeriodPayload() {
+    const preset = els.adminPeriodPreset.value;
+    const maxArticles = Math.max(1, Math.min(30, parseInt(els.adminMaxArticles.value || "5", 10) || 5));
+    if (preset === "custom") {
+      const dateFrom = els.adminDateFrom.value.trim();
+      const dateTo = els.adminDateTo.value.trim();
+      if (!dateFrom || !dateTo) {
+        throw new Error("Укажите обе даты периода (от и до).");
+      }
+      if (dateFrom > dateTo) {
+        throw new Error("Дата начала периода не может быть позже даты окончания.");
+      }
+      return { period_days: 30, date_from: dateFrom, date_to: dateTo, max_articles: maxArticles };
+    }
+    return {
+      period_days: parseInt(preset, 10) || 30,
+      date_from: "",
+      date_to: "",
+      max_articles: maxArticles,
+    };
+  }
+
+  async function dispatchGitHubWorkflow(inputs) {
+    const cfg = loadGhConfig();
+    if (!cfg.repo || !cfg.token) {
+      els.adminSettingsDetails.open = true;
+      throw new Error("Укажите GitHub репозиторий и Token (с правом Actions: Write) в настройках ниже.");
+    }
+    const url = `https://api.github.com/repos/${cfg.repo}/actions/workflows/update-and-deploy.yml/dispatches`;
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${cfg.token}`,
+        Accept: "application/vnd.github+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ ref: "main", inputs }),
+    });
+    if (!resp.ok) {
+      const errText = await resp.text();
+      throw new Error(`GitHub API ${resp.status}: ${errText || "проверьте токен и имя репозитория"}`);
+    }
+    return `https://github.com/${cfg.repo}/actions/workflows/update-and-deploy.yml`;
+  }
+
+  function startServerStatusPolling() {
+    if (state.pollTimer) clearInterval(state.pollTimer);
+    const poll = async () => {
+      try {
+        const snap = await apiFetch("/api/admin/status");
+        if (snap.running) {
+          showAdminStatus("Обновление выполняется…", "Идёт поиск статей и извлечение схем синтеза.", {
+            logs: snap.logs,
+          });
+        } else {
+          clearInterval(state.pollTimer);
+          state.pollTimer = null;
+          els.btnAdminUpdate.disabled = false;
+          if (snap.error) {
+            showAdminStatus("Ошибка обновления", snap.error, { logs: snap.logs });
+          } else {
+            showAdminStatus(
+              "Обновление завершено",
+              `Добавлено новых синтезов: ${snap.added_count || 0}.`,
+              { logs: snap.logs }
+            );
+          }
+          await loadCatalog();
+        }
+      } catch (err) {
+        clearInterval(state.pollTimer);
+        state.pollTimer = null;
+        els.btnAdminUpdate.disabled = false;
+        showAdminStatus("Ошибка статуса", err.message);
+      }
+    };
+    poll();
+    state.pollTimer = setInterval(poll, 2000);
+  }
+
+  async function handleAdminUpdate() {
+    if (!isAdmin()) return;
+    let payload;
+    try {
+      payload = getSelectedPeriodPayload();
+    } catch (err) {
+      showAdminStatus("Проверьте параметры", err.message);
+      return;
+    }
+
+    els.btnAdminUpdate.disabled = true;
+    try {
+      if (state.backendMode === "server") {
+        const geminiKey = els.adminGeminiKey.value.trim();
+        await apiFetch("/api/admin/update", {
+          method: "POST",
+          body: JSON.stringify({
+            ...payload,
+            gemini_api_key: geminiKey || undefined,
+          }),
+        });
+        showAdminStatus("Запущено", "Пайплайн обновления синтезов запущен на сервере…");
+        startServerStatusPolling();
+      } else {
+        const actionsUrl = await dispatchGitHubWorkflow({
+          action: "update",
+          period_days: String(payload.period_days),
+          date_from: payload.date_from,
+          date_to: payload.date_to,
+          max_articles: String(payload.max_articles),
+        });
+        els.btnAdminUpdate.disabled = false;
+        showAdminStatus(
+          "Запущено в GitHub Actions",
+          "Задача обновления каталога отправлена в GitHub Actions. Через 1–3 минуты нажмите «Перезагрузить каталог».",
+          { link: actionsUrl }
+        );
+      }
+    } catch (err) {
+      els.btnAdminUpdate.disabled = false;
+      showAdminStatus("Не удалось запустить обновление", err.message);
+    }
+  }
+
+  async function handleDeleteProblem(id, label) {
+    if (!isAdmin()) return;
+    if (!window.confirm(`Удалить синтез «${label || id}»?`)) return;
+
+    try {
+      if (state.backendMode === "server") {
+        await apiFetch(`/api/admin/problems/${encodeURIComponent(id)}`, { method: "DELETE" });
+        showAdminStatus("Удалено", `Синтез «${label || id}» удалён.`);
+        await loadCatalog();
+        if (state.currentEntry && state.currentEntry.id === id) {
+          window.location.hash = "#/";
+        }
+      } else {
+        const actionsUrl = await dispatchGitHubWorkflow({
+          action: "delete",
+          delete_ids: id,
+        });
+        state.catalog = state.catalog.filter(p => p.id !== id);
+        renderCatalog();
+        if (state.currentEntry && state.currentEntry.id === id) {
+          window.location.hash = "#/";
+        }
+        showAdminStatus(
+          "Удаление отправлено в GitHub Actions",
+          `Запрос на удаление «${label || id}» отправлен. Каталог на GitHub Pages обновится после завершения workflow.`,
+          { link: actionsUrl }
+        );
+      }
+    } catch (err) {
+      showAdminStatus("Ошибка удаления", err.message);
+    }
+  }
+
+  async function handleAdminDeleteAll() {
+    if (!isAdmin()) return;
+    if (!window.confirm("Удалить ВСЕ синтезы из каталога? Это действие нельзя отменить.")) return;
+
+    try {
+      if (state.backendMode === "server") {
+        const res = await apiFetch("/api/admin/problems/delete-all", {
+          method: "POST",
+          body: "{}",
+        });
+        showAdminStatus("Каталог очищен", `Удалено синтезов: ${res.count || 0}.`);
+        await loadCatalog();
+        window.location.hash = "#/";
+      } else {
+        const actionsUrl = await dispatchGitHubWorkflow({ action: "delete_all" });
+        state.catalog = [];
+        renderCatalog();
+        window.location.hash = "#/";
+        showAdminStatus(
+          "Очистка отправлена в GitHub Actions",
+          "Запрос на удаление всех синтезов отправлен в GitHub Actions.",
+          { link: actionsUrl }
+        );
+      }
+    } catch (err) {
+      showAdminStatus("Ошибка очистки", err.message);
+    }
+  }
+
+  function bindAuthAndAdminEvents() {
+    els.btnCloseAuth.addEventListener("click", closeAuthModal);
+    els.authModal.addEventListener("click", (e) => {
+      if (e.target === els.authModal) closeAuthModal();
+    });
+    els.tabLogin.addEventListener("click", () => setAuthMode("login"));
+    els.tabRegister.addEventListener("click", () => setAuthMode("register"));
+    els.authForm.addEventListener("submit", handleAuthSubmit);
+
+    els.adminPeriodPreset.addEventListener("change", syncPeriodInputs);
+    els.btnAdminUpdate.addEventListener("click", handleAdminUpdate);
+    els.btnAdminDeleteAll.addEventListener("click", handleAdminDeleteAll);
+    els.btnAdminRefreshCatalog.addEventListener("click", () => loadCatalog());
+
+    els.btnSaveGhConfig.addEventListener("click", () => {
+      saveGhConfig(els.adminGhRepo.value || DEFAULT_GH_REPO, els.adminGhToken.value || "");
+      showAdminStatus("Сохранено", "GitHub репозиторий и токен сохранены в браузере.");
+    });
+    els.btnClearGhConfig.addEventListener("click", () => {
+      localStorage.removeItem(GH_CONFIG_KEY);
+      els.adminGhToken.value = "";
+      showAdminStatus("Очищено", "Токен удалён из браузера.");
+    });
+
+    if (els.btnDeleteCurrentProblem) {
+      els.btnDeleteCurrentProblem.addEventListener("click", () => {
+        if (!state.currentEntry) return;
+        handleDeleteProblem(
+          state.currentEntry.id,
+          state.currentEntry.target_molecule || state.currentEntry.title
+        );
+      });
+    }
+  }
+
+  async function initApp() {
+    initTheme();
+    bindEvents();
+    bindAuthAndAdminEvents();
+    syncPeriodInputs();
+    initGalaxyObservatory();
+    await detectBackendAndRestoreSession();
+    renderAuthUI();
+    await loadCatalog();
+  }
+
+  initApp();
 })();

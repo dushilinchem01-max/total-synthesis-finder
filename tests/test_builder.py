@@ -109,7 +109,7 @@ def test_run_pipeline_end_to_end_and_dedup(tmp_path: Path) -> None:
         )
         mock_oa.download_pdf.side_effect = lambda url, dest: Path(dest).write_bytes(b"%PDF-1.4 demo")
 
-        added = run_pipeline(out_dir=out_dir, max_articles=5)
+        added = run_pipeline(out_dir=out_dir, max_articles=5, use_openalex=False)
         assert len(added) == 1
         assert (out_dir / "catalog.json").exists()
         assert (out_dir / "problems" / f"{sample_prob.id}.json").exists()
@@ -120,5 +120,5 @@ def test_run_pipeline_end_to_end_and_dedup(tmp_path: Path) -> None:
         assert catalog["problems"][0]["doi"] == "10.1039/c1sc00100a"
 
         # Second run should deduplicate by DOI and add 0 new problems
-        added_again = run_pipeline(out_dir=out_dir, max_articles=5)
+        added_again = run_pipeline(out_dir=out_dir, max_articles=5, use_openalex=False)
         assert len(added_again) == 0

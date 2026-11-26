@@ -22,12 +22,106 @@
       </a>
       <div class="topbar-actions">
         <span class="updated-pill" id="updatedLabel">Loading catalog…</span>
+        <div class="auth-bar" id="authBar">
+          <button type="button" class="btn btn-primary" id="btnOpenAuth">Войти / Регистрация</button>
+        </div>
         <button type="button" class="btn btn-ghost" id="themeToggle">Light / Dark</button>
       </div>
     </div>
   </header>
 
   <main class="container main-wrap">
+    <!-- Admin Control Panel (Admin Only) -->
+    <section id="adminPanel" class="px-panel admin-panel hidden" aria-label="Панель администратора">
+      <div class="admin-panel-head">
+        <div>
+          <span class="hero-kicker">ADMIN CONTROL PANEL</span>
+          <h2>Управление синтезами</h2>
+        </div>
+        <div class="admin-head-actions">
+          <span class="pill pill-accent" id="adminModeBadge">Режим…</span>
+          <button type="button" class="btn btn-ghost" id="btnAdminRefreshCatalog">Перезагрузить каталог</button>
+        </div>
+      </div>
+
+      <div class="admin-controls-grid">
+        <div class="admin-field">
+          <label for="adminPeriodPreset">Период обновления</label>
+          <select id="adminPeriodPreset">
+            <option value="7">За последние 7 дней</option>
+            <option value="30" selected>За последние 30 дней</option>
+            <option value="90">За последние 90 дней</option>
+            <option value="180">За последние 6 месяцев</option>
+            <option value="365">За последний год</option>
+            <option value="custom">Свой период (выбрать даты)</option>
+          </select>
+        </div>
+
+        <div class="admin-field hidden" id="adminDateFromWrap">
+          <label for="adminDateFrom">Дата от</label>
+          <input type="date" id="adminDateFrom">
+        </div>
+
+        <div class="admin-field hidden" id="adminDateToWrap">
+          <label for="adminDateTo">Дата до</label>
+          <input type="date" id="adminDateTo">
+        </div>
+
+        <div class="admin-field admin-field-sm">
+          <label for="adminMaxArticles">Макс. статей</label>
+          <input type="number" id="adminMaxArticles" min="1" max="30" value="5">
+        </div>
+
+        <div class="admin-actions-col">
+          <button type="button" class="btn btn-primary" id="btnAdminUpdate">Обновить синтезы</button>
+          <button type="button" class="btn btn-danger" id="btnAdminDeleteAll">Удалить все</button>
+        </div>
+      </div>
+
+      <!-- Connection / API Keys settings -->
+      <details class="admin-settings" id="adminSettingsDetails">
+        <summary id="adminSettingsSummary">Настройки подключения и ключей</summary>
+        <div class="admin-settings-body">
+          <!-- GitHub Pages mode settings -->
+          <div id="ghSettingsBox" class="admin-settings-grid hidden">
+            <div class="admin-field">
+              <label for="adminGhRepo">GitHub репозиторий (owner/repo)</label>
+              <input type="text" id="adminGhRepo" placeholder="dushilinchem01-max/total-synthesis-finder">
+            </div>
+            <div class="admin-field">
+              <label for="adminGhToken">GitHub Token (Fine-grained PAT с правом Actions: Read &amp; Write)</label>
+              <input type="password" id="adminGhToken" placeholder="github_pat_..." autocomplete="off">
+            </div>
+            <div class="admin-actions-col">
+              <button type="button" class="btn btn-outline" id="btnSaveGhConfig">Сохранить токен</button>
+              <button type="button" class="btn btn-ghost" id="btnClearGhConfig">Очистить</button>
+            </div>
+            <p class="admin-hint">
+              На GitHub Pages обновление и удаление запускаются через GitHub Actions (<code>workflow_dispatch</code>). Токен хранится только в вашем браузере (<code>localStorage</code>).
+            </p>
+          </div>
+
+          <!-- Local Server mode settings -->
+          <div id="serverSettingsBox" class="admin-settings-grid hidden">
+            <div class="admin-field">
+              <label for="adminGeminiKey">GEMINI_API_KEY (опционально, если не задан в env сервера)</label>
+              <input type="password" id="adminGeminiKey" placeholder="AIza..." autocomplete="off">
+            </div>
+            <p class="admin-hint" id="serverKeyHint"></p>
+          </div>
+        </div>
+      </details>
+
+      <div id="adminStatusBox" class="admin-status hidden">
+        <div class="admin-status-head">
+          <strong id="adminStatusTitle">Статус</strong>
+          <a id="adminStatusLink" class="hidden" target="_blank" rel="noopener">Открыть в GitHub Actions &#8599;</a>
+        </div>
+        <div id="adminStatusText" class="admin-status-text"></div>
+        <pre id="adminStatusLogs" class="admin-status-logs hidden"></pre>
+      </div>
+    </section>
+
     <!-- Catalog View -->
     <section id="catalogView">
       <div class="hero-grid">
@@ -98,7 +192,7 @@
       <div class="stats-row" id="statsRow"></div>
       <div class="catalog-grid" id="catalogGrid"></div>
       <div class="empty-state hidden" id="emptyState">
-        No synthesis problems match your current filters.
+        Каталог синтезов пока пуст. Войдите как администратор, чтобы запустить обновление синтезов за выбранный период.
       </div>
     </section>
 
@@ -122,12 +216,45 @@
           <button type="button" class="btn" id="btnBookmark">Bookmark</button>
           <button type="button" class="btn btn-primary" id="btnMarkSolved">Mark Solved</button>
           <a class="btn btn-outline hidden" id="btnSnakeHtml" target="_blank" rel="noopener">Open Snake Flashcard</a>
+          <button type="button" class="btn btn-danger hidden" id="btnDeleteCurrentProblem">Удалить синтез</button>
         </div>
       </div>
 
       <div class="snake-board" id="snakeBoard"></div>
     </section>
   </main>
+
+  <!-- Auth Modal (Login / Register) -->
+  <div class="modal-backdrop hidden" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+    <div class="px-panel modal-card">
+      <div class="modal-head">
+        <h2 id="authModalTitle">Аккаунт</h2>
+        <button type="button" class="btn btn-ghost btn-icon" id="btnCloseAuth" aria-label="Закрыть">&times;</button>
+      </div>
+
+      <div class="auth-tabs" role="tablist">
+        <button type="button" class="btn active" id="tabLogin" role="tab" aria-selected="true">Вход</button>
+        <button type="button" class="btn" id="tabRegister" role="tab" aria-selected="false">Регистрация</button>
+      </div>
+
+      <form id="authForm" class="auth-form">
+        <div class="admin-field">
+          <label for="authUsername">Логин</label>
+          <input type="text" id="authUsername" required autocomplete="username" placeholder="Введите логин">
+        </div>
+        <div class="admin-field">
+          <label for="authPassword">Пароль</label>
+          <input type="password" id="authPassword" required autocomplete="current-password" placeholder="Введите пароль">
+        </div>
+        <div class="admin-field hidden" id="authConfirmWrap">
+          <label for="authPasswordConfirm">Повторите пароль</label>
+          <input type="password" id="authPasswordConfirm" autocomplete="new-password" placeholder="Повторите пароль">
+        </div>
+        <div id="authMessage" class="auth-message hidden"></div>
+        <button type="submit" class="btn btn-primary auth-submit" id="authSubmitBtn">Войти</button>
+      </form>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>

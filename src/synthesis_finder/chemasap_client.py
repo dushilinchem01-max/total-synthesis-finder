@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from html import unescape
 import logging
 import re
@@ -36,6 +36,7 @@ class RawArticle:
     published_at: str
     source_type: str = "journal"
     oa: bool | None = None
+    candidate_pdf_urls: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize article to a plain dictionary."""

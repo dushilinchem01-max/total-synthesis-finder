@@ -61,8 +61,13 @@ class GeminiClient:
         http_client: httpx.Client | None = None,
     ) -> None:
         self.api_key = api_key if api_key is not None else os.getenv("GEMINI_API_KEY", "")
-        self.model = model or os.getenv("GEMINI_MODEL", "gemini-3-flash-preview")
-        self.fallback_models = ("gemini-3.1-flash-lite", "gemini-flash-lite-latest")
+        self.model = model or os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+        self.fallback_models = (
+            "gemini-3-flash-preview",
+            "gemini-2.5-flash",
+            "gemini-3.1-flash-lite",
+            "gemini-flash-lite-latest",
+        )
         self.timeout = timeout
         self._http_client = http_client
 
@@ -104,20 +109,33 @@ class GeminiClient:
         if system_prompt:
             payload["systemInstruction"] = {"parts": [{"text": system_prompt}]}
 
-        url = f"{self.BASE_URL}/{self.model}:generateContent"
-        params = {"key": self.api_key}
+        models_to_try: list[str] = []
+        for candidate in (self.model, *self.fallback_models):
+            if candidate and candidate not in models_to_try:
+                models_to_try.append(candidate)
 
+        params = {"key": self.api_key}
         close_client = self._http_client is None
         client = self._http_client or httpx.Client(timeout=self.timeout)
+        last_error: Exception | None = None
+        data: dict[str, Any] | None = None
         try:
-            resp = client.post(url, params=params, json=payload)
-            resp.raise_for_status()
-            data = resp.json()
-        except httpx.HTTPError as exc:
-            raise LLMError(f"Gemini request failed: {exc}") from exc
+            for model_name in models_to_try:
+                url = f"{self.BASE_URL}/{model_name}:generateContent"
+                try:
+                    resp = client.post(url, params=params, json=payload)
+                    resp.raise_for_status()
+                    data = resp.json()
+                    break
+                except httpx.HTTPError as exc:
+                    last_error = exc
+                    continue
         finally:
             if close_client:
                 client.close()
+
+        if data is None:
+            raise LLMError(f"Gemini request failed across models {models_to_try}: {last_error}") from last_error
 
         candidates = data.get("candidates") or []
         if not candidates:

@@ -666,3 +666,283 @@ button, input, select, textarea {
   font-weight: 700;
   margin-top: 4px;
 }
+
+/* Auth & Admin UI */
+.auth-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.user-pill {
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 5px 10px;
+  border: 2px solid var(--border);
+  background: var(--surface-alt);
+  color: var(--text);
+}
+
+.user-pill-admin {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.btn-danger {
+  border-color: #ef4444;
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.12);
+}
+
+[data-theme="light"] .btn-danger {
+  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.btn-danger:hover {
+  border-color: #dc2626;
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.btn-danger-sm {
+  padding: 3px 8px;
+  font-size: 0.72rem;
+  box-shadow: none;
+}
+
+.btn-icon {
+  padding: 4px 10px;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.card-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Admin Panel */
+.admin-panel {
+  padding: 18px 20px;
+  margin-bottom: 20px;
+  border-color: var(--accent-border);
+}
+
+.admin-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.admin-panel-head h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.admin-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.admin-controls-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.admin-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1 1 180px;
+}
+
+.admin-field-sm {
+  flex: 0 1 120px;
+}
+
+.admin-field label {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.admin-field input,
+.admin-field select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 2px solid var(--border);
+  background: var(--surface-alt);
+  color: var(--text);
+  font-size: 0.84rem;
+}
+
+.admin-actions-col {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.admin-settings {
+  margin-top: 14px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.admin-settings summary {
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  user-select: none;
+}
+
+.admin-settings-body {
+  margin-top: 12px;
+}
+
+.admin-settings-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.admin-hint {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+.admin-hint code {
+  background: var(--surface-alt);
+  padding: 1px 5px;
+  border: 1px solid var(--border);
+}
+
+.admin-status {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 2px solid var(--border);
+  background: var(--surface-alt);
+}
+
+.admin-status-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+  font-size: 0.82rem;
+}
+
+.admin-status-head a {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.admin-status-text {
+  font-size: 0.82rem;
+  color: var(--text);
+}
+
+.admin-status-logs {
+  margin: 10px 0 0;
+  padding: 10px;
+  max-height: 200px;
+  overflow: auto;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: var(--muted);
+  white-space: pre-wrap;
+}
+
+/* Auth Modal */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(7, 11, 20, 0.74);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 22px;
+}
+
+.modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.modal-head h2 {
+  margin: 0;
+  font-size: 1.12rem;
+}
+
+.auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auth-message {
+  font-size: 0.8rem;
+  padding: 8px 10px;
+  border: 2px solid var(--border);
+  background: var(--surface-alt);
+}
+
+.auth-message.is-error {
+  border-color: #ef4444;
+  color: #f87171;
+}
+
+[data-theme="light"] .auth-message.is-error {
+  color: #b91c1c;
+}
+
+.auth-message.is-ok {
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.auth-submit {
+  margin-top: 4px;
+  width: 100%;
+}

@@ -15,6 +15,7 @@ dependencies = [
 
 [project.scripts]
 synthesis-finder = "synthesis_finder.pipeline:main"
+synthesis-finder-server = "synthesis_finder.server:main"
 
 [build-system]
 requires = ["hatchling"]
