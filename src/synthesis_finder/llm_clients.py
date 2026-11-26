@@ -61,15 +61,15 @@ class GeminiClient:
         http_client: httpx.Client | None = None,
     ) -> None:
         self.api_key = api_key if api_key is not None else os.getenv("GEMINI_API_KEY", "")
-        self.model = model or os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+        self.model = model or os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
         self.fallback_models = (
+            "gemini-flash-lite-latest",
             "gemini-3-flash-preview",
             "gemini-2.5-flash",
-            "gemini-3.1-flash-lite",
-            "gemini-flash-lite-latest",
         )
         self.timeout = timeout
         self._http_client = http_client
+        self._dead_models: set[str] = set()
 
     @property
     def is_configured(self) -> bool:
@@ -111,8 +111,10 @@ class GeminiClient:
 
         models_to_try: list[str] = []
         for candidate in (self.model, *self.fallback_models):
-            if candidate and candidate not in models_to_try:
+            if candidate and candidate not in models_to_try and candidate not in self._dead_models:
                 models_to_try.append(candidate)
+        if not models_to_try:
+            models_to_try = [self.model]
 
         params = {"key": self.api_key}
         close_client = self._http_client is None
@@ -127,6 +129,11 @@ class GeminiClient:
                     resp.raise_for_status()
                     data = resp.json()
                     break
+                except httpx.HTTPStatusError as exc:
+                    if exc.response.status_code == 404:
+                        self._dead_models.add(model_name)
+                    last_error = exc
+                    continue
                 except httpx.HTTPError as exc:
                     last_error = exc
                     continue

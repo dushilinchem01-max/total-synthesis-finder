@@ -273,14 +273,6 @@ def run_pipeline(
             if not h_res.passed:
                 continue
 
-            if use_llm_screening and has_text_llm:
-                try:
-                    if not is_total_synthesis_candidate(article.title, article.abstract, llm=llm):
-                        _emit(progress_callback, f"LLM screening rejected: {article.title[:80]}")
-                        continue
-                except Exception as exc:
-                    logger.warning("LLM screening failed for %s: %s", article.title, exc)
-
             if not llm.gemini.is_configured:
                 _emit(progress_callback, "GEMINI_API_KEY is required for multimodal PDF extraction; stopping.")
                 break
@@ -290,6 +282,14 @@ def run_pipeline(
             if not downloaded_pdf_url:
                 _emit(progress_callback, f"No downloadable OA PDF for: {article.title[:70]} ({doi_norm})")
                 continue
+
+            if use_llm_screening and has_text_llm:
+                try:
+                    if not is_total_synthesis_candidate(article.title, article.abstract, llm=llm):
+                        _emit(progress_callback, f"LLM screening rejected: {article.title[:80]}")
+                        continue
+                except Exception as exc:
+                    logger.warning("LLM screening failed for %s: %s", article.title, exc)
 
             _emit(progress_callback, f"Extracting synthesis from PDF: {article.title[:75]}")
             try:

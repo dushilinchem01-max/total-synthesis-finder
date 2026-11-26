@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import io
 from pathlib import Path
+from typing import Any
 
 import pymupdf as fitz
 import numpy as np
@@ -64,12 +65,14 @@ def trim_whitespace(im: Image.Image, pad: int = 10) -> Image.Image:
 
 def crop_box_2d(
     page_img: Image.Image,
-    box_2d: list[int] | tuple[int, int, int, int],
+    box_2d: list[Any] | tuple[Any, ...],
     *,
     margin_ratio: float = 0.008,
     pad: int = 10,
 ) -> Image.Image:
     """Crop a Gemini [ymin, xmin, ymax, xmax] (0..1000) box from a page image and trim."""
+    if len(box_2d) == 1 and isinstance(box_2d[0], (list, tuple)):
+        box_2d = box_2d[0]
     if len(box_2d) != 4:
         raise ValueError(f"Expected 4 coordinates [ymin, xmin, ymax, xmax], got {box_2d}")
     ymin, xmin, ymax, xmax = [float(v) for v in box_2d]
