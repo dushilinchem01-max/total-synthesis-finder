@@ -1265,18 +1265,22 @@
   }
 
   async function detectBackendAndRestoreSession() {
-    try {
-      const health = await apiFetch("/api/health");
-      if (health && health.ok) {
-        state.backendMode = "server";
-        state.serverHealth = health;
-        const me = await apiFetch("/api/auth/me");
-        state.user = me.user || null;
-        state.progress = loadProgress();
-        return;
+    const host = (window.location.hostname || "").toLowerCase();
+    const isStaticHost = host.endsWith(".github.io") || window.location.protocol === "file:";
+    if (!isStaticHost) {
+      try {
+        const health = await apiFetch("/api/health");
+        if (health && health.ok) {
+          state.backendMode = "server";
+          state.serverHealth = health;
+          const me = await apiFetch("/api/auth/me");
+          state.user = me.user || null;
+          state.progress = loadProgress();
+          return;
+        }
+      } catch {
+        // Running as static site (http.server)
       }
-    } catch {
-      // Running as static site (GitHub Pages or http.server)
     }
 
     state.backendMode = "static";
@@ -1704,6 +1708,10 @@
   }
 
   function bindAuthAndAdminEvents() {
+    const initialAuthBtn = document.getElementById("btnOpenAuth");
+    if (initialAuthBtn) {
+      initialAuthBtn.addEventListener("click", () => openAuthModal("login"));
+    }
     els.btnCloseAuth.addEventListener("click", closeAuthModal);
     els.authModal.addEventListener("click", (e) => {
       if (e.target === els.authModal) closeAuthModal();
