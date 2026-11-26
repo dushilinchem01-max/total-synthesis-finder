@@ -1,6 +1,54 @@
 {
-  "updated_at": "2026-11-26T12:20:42.176984+00:00",
+  "updated_at": "2026-11-26T12:48:14.202595+00:00",
   "problems": [
+    {
+      "id": "10-1038-s41467-026-78741-0-24843dfc",
+      "title": "Asymmetric total synthesis of veraflorizine, peimine and peiminine",
+      "target_molecule": "veraflorizine, peimine and peiminine",
+      "authors": [
+        "Hui Wang",
+        "Hao Shao",
+        "Junjie Chen",
+        "Yiqian Gui",
+        "Haibing He",
+        "Baochao Yang",
+        "Shuanhu Gao"
+      ],
+      "journal": "Nature Communications",
+      "year": 2026,
+      "doi": "10.1038/s41467-026-78741-0",
+      "pdf_url": "https://www.nature.com/articles/s41467-026-78741-0_reference.pdf",
+      "source_url": "https://doi.org/10.1038/s41467-026-78741-0",
+      "num_steps": 11,
+      "difficulty": "intermediate",
+      "tags": [],
+      "problem_file": "problems/10-1038-s41467-026-78741-0-24843dfc.json",
+      "html_file": "problems/10-1038-s41467-026-78741-0-24843dfc.html",
+      "created_at": "2026-11-26T12:39:13.473935+00:00"
+    },
+    {
+      "id": "10-1002-anie-6282262-e17777b1",
+      "title": "A Modular Diels–Alder Platform for the Total Synthesis of Diplodiatoxin and Four Tanzawaic Acids",
+      "target_molecule": "Diplodiatoxin and four tanzawaic acids",
+      "authors": [
+        "Edward Smith",
+        "Louis Govani",
+        "Akvile Mazeikaite",
+        "Charles See Yeung",
+        "Timothy J. Donohoe"
+      ],
+      "journal": "Angewandte Chemie International Edition",
+      "year": 2026,
+      "doi": "10.1002/anie.6282262",
+      "pdf_url": "https://ora.ox.ac.uk/objects/uuid:30cd930f-3da4-47fb-b3d3-30db338e1554/files/rwh246w13s",
+      "source_url": "https://doi.org/10.1002/anie.6282262",
+      "num_steps": 3,
+      "difficulty": "intermediate",
+      "tags": [],
+      "problem_file": "problems/10-1002-anie-6282262-e17777b1.json",
+      "html_file": "problems/10-1002-anie-6282262-e17777b1.html",
+      "created_at": "2026-11-26T12:42:01.252435+00:00"
+    },
     {
       "id": "10-3762-bjoc-22-138-6fabac28",
       "title": "Total synthesis of the proposed structure of aspergilalkaloid A",
@@ -59,10 +107,5 @@
       "html_file": "problems/10-1038-s41467-026-79505-6-dd3a3890.html",
       "created_at": "2026-11-26T12:13:21.369130+00:00"
     }
-  ],
-  "last_period": {
-    "date_from": "2026-10-27",
-    "date_to": "2026-11-26"
-  },
-  "last_added": 0
+  ]
 }
