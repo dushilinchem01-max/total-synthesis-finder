@@ -1,28 +1,28 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>SynthesisFinder — Open-Access Total Synthesis Problems</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2.5 27.7 9.25v13.5L16 29.5 4.3 22.75V9.25Z' fill='none' stroke='%231d4ed8' stroke-width='2.6'/%3E%3C/svg%3E">
+  <title>SynthesisFinder — Open-Access Total Synthesis Observatory</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2.5 27.7 9.25v13.5L16 29.5 4.3 22.75V9.25Z' fill='none' stroke='%23a3e635' stroke-width='2.6'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <header class="topbar">
     <div class="container topbar-inner">
       <a href="#/" class="brand" id="brandHome">
-        <svg class="brand-logo" viewBox="0 0 32 32" aria-hidden="true">
-          <path d="M16 2.5 27.7 9.25v13.5L16 29.5 4.3 22.75V9.25Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/>
-          <path d="M16 8.5 22.5 12.25v7.5L16 23.5l-6.5-3.75v-7.5Z" fill="currentColor" opacity=".18"/>
-        </svg>
+        <span class="brand-pixel-icon" aria-hidden="true"></span>
         <div>
           <span class="brand-title">SynthesisFinder</span>
-          <span class="brand-sub">Open-Access Total Synthesis Trainer</span>
+          <span class="brand-sub">Open-Access Total Synthesis</span>
         </div>
       </a>
       <div class="topbar-actions">
         <span class="updated-pill" id="updatedLabel">Loading catalog…</span>
-        <button type="button" class="btn btn-ghost" id="themeToggle" title="Toggle theme">Theme</button>
+        <button type="button" class="btn btn-ghost" id="themeToggle">Light / Dark</button>
       </div>
     </div>
   </header>
@@ -30,9 +30,50 @@
   <main class="container main-wrap">
     <!-- Catalog View -->
     <section id="catalogView">
+      <div class="hero-grid">
+        <div class="px-panel hero-copy">
+          <div>
+            <span class="hero-kicker">TOTAL SYNTHESIS OBSERVATORY</span>
+            <h1>The Future of Organic Synthesis</h1>
+          </div>
+          <div class="hero-progress" id="heroProgress">
+            <div class="hero-progress-head">
+              <span>Mastery Progress</span>
+              <span id="heroProgressLabel">0 / 0 solved</span>
+            </div>
+            <div class="hero-progress-track">
+              <div class="hero-progress-fill" id="heroProgressFill"></div>
+            </div>
+          </div>
+          <div class="hero-stats">
+            <div class="stat-box">
+              <b>6</b>
+              <span>Galaxies</span>
+            </div>
+            <div class="stat-box">
+              <b id="heroReactionCount">0</b>
+              <span>Reactions</span>
+            </div>
+            <div class="stat-box">
+              <b id="heroProblemCount">0</b>
+              <span>Problems</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="px-panel galaxy-stage" id="galaxyStage">
+          <canvas id="galaxyCanvas"></canvas>
+          <div class="galaxy-tooltip" id="galaxyTooltip">
+            <div class="tt-fam" id="ttFam"></div>
+            <div class="tt-name" id="ttName"></div>
+            <div class="tt-meta" id="ttMeta"></div>
+          </div>
+        </div>
+      </div>
+
       <div class="controls-bar">
         <div class="search-wrap">
-          <input type="search" id="searchInput" placeholder="Search molecule, title, journal, or tag…" autocomplete="off">
+          <input type="search" id="searchInput" placeholder="Search molecule, title, reaction, journal, or tag…" autocomplete="off">
         </div>
         <div class="filters-wrap">
           <select id="difficultyFilter" aria-label="Difficulty">
@@ -50,6 +91,7 @@
             <option value="solved">Solved</option>
             <option value="bookmarked">Bookmarked</option>
           </select>
+          <button type="button" class="btn hidden" id="clearGalaxyFilter">Clear Galaxy</button>
         </div>
       </div>
 
@@ -67,9 +109,9 @@
         <div class="problem-links" id="problemLinks"></div>
       </div>
 
-      <article class="problem-header-card" id="problemHeader"></article>
+      <article class="px-panel problem-header-card" id="problemHeader"></article>
 
-      <div class="solver-toolbar">
+      <div class="px-panel solver-toolbar">
         <div class="toolbar-group">
           <button type="button" class="btn" id="btnHideReagents">Hide Reagents</button>
           <button type="button" class="btn" id="btnHideProducts">Hide Products</button>
