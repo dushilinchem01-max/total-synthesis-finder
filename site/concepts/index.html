@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Design Concepts — SynthesisFinder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0; background: #070b14; color: #e2e8f0;
+      font-family: "Inter", sans-serif; padding: 32px 20px;
+    }
+    .px { font-family: "Silkscreen", monospace; }
+    .wrap { max-width: 1080px; margin: 0 auto; }
+    h1 { font-size: 1.5rem; margin: 0 0 8px; color: #a3e635; }
+    p { color: #94a3b8; margin: 0 0 28px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 20px; }
+    .card {
+      border: 2px solid #2a3a58; background: #0f1624;
+      box-shadow: 5px 5px 0 #2a3a58; padding: 20px;
+      display: flex; flex-direction: column; justify-content: space-between; gap: 16px;
+    }
+    .card:hover { border-color: #a3e635; }
+    .btn {
+      display: inline-block; text-align: center; text-decoration: none;
+      font-family: "Silkscreen", monospace; font-size: 0.8rem;
+      padding: 10px 14px; background: #a3e635; color: #070b14; border: 2px solid #a3e635;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1 class="px">SYNTHESISFINDER // PIXEL CONSTELLATION CONCEPTS</h1>
+    <p>3 интерактивных прототипа в стиле OpenRouter (кластеры типов реакций + мерцающие пиксельные звёзды именных реакций + светлая и тёмная темы). Выберите, какой развиваем дальше:</p>
+    <div class="grid">
+      <div class="card">
+        <div>
+          <h2 class="px" style="margin:0 0 8px;font-size:1.05rem;">A. Retro Lab Observatory</h2>
+          <p style="margin:0;font-size:0.9rem;">Космический dark mode (как на OpenRouter) + чертёжный Blueprint light mode. Большая карта созвездий сверху, карточки задач снизу.</p>
+        </div>
+        <a class="btn" href="concept-a.html">OPEN CONCEPT A &rarr;</a>
+      </div>
+      <div class="card">
+        <div>
+          <h2 class="px" style="margin:0 0 8px;font-size:1.05rem;">B. Alchemy Pixel Atlas</h2>
+          <p style="margin:0;font-size:0.9rem;">Тёплый пергаментный RPG light mode + полуночный фиолетовый dark mode. Разделённый экран: карта реакций слева и журнал квестов справа.</p>
+        </div>
+        <a class="btn" href="concept-b.html">OPEN CONCEPT B &rarr;</a>
+      </div>
+      <div class="card">
+        <div>
+          <h2 class="px" style="margin:0 0 8px;font-size:1.05rem;">C. Cyber-Chem Terminal</h2>
+          <p style="margin:0;font-size:0.9rem;">Фосфорный CRT-терминал (dark) + стиль Retro-Mac 1984 (light). Матрица созвездий сверху, командная строка и таблица синтезов снизу.</p>
+        </div>
+        <a class="btn" href="concept-c.html">OPEN CONCEPT C &rarr;</a>
+      </div>
+    </div>
+    <p style="margin-top:28px;"><a href="../index.html" style="color:#38bdf8;">&larr; Вернуться на основной сайт</a></p>
+  </div>
+</body>
+</html>
