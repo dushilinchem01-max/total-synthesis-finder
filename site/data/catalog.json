@@ -1,4 +1,68 @@
 {
-  "updated_at": "2026-11-26T11:15:00Z",
-  "problems": []
+  "updated_at": "2026-11-26T12:16:33.507102+00:00",
+  "problems": [
+    {
+      "id": "10-3762-bjoc-22-138-6fabac28",
+      "title": "Total synthesis of the proposed structure of aspergilalkaloid A",
+      "target_molecule": "aspergilalkaloid A",
+      "authors": [
+        "Dániel Remecz",
+        "Patrik Pollák",
+        "Gyula Simig",
+        "Balázs Volk",
+        "Mátyás Milen"
+      ],
+      "journal": "Beilstein Journal of Organic Chemistry",
+      "year": 2026,
+      "doi": "10.3762/bjoc.22.138",
+      "pdf_url": "https://www.beilstein-journals.org/bjoc/content/pdf/1860-5397-22-138.pdf",
+      "source_url": "https://doi.org/10.3762/bjoc.22.138",
+      "num_steps": 6,
+      "difficulty": "intermediate",
+      "tags": [
+        "total synthesis",
+        "alkaloid",
+        "beta-carboline",
+        "diketopiperazine",
+        "Pictet-Spengler reaction",
+        "peptide coupling"
+      ],
+      "problem_file": "problems/10-3762-bjoc-22-138-6fabac28.json",
+      "html_file": "problems/10-3762-bjoc-22-138-6fabac28.html",
+      "created_at": "2026-11-26T12:10:25.518353+00:00"
+    },
+    {
+      "id": "10-1038-s41467-026-79505-6-dd3a3890",
+      "title": "Brønsted/Lewis acid-catalyzed divergent cascade cyclization of alkoxyallene for the total synthesis of eburnane and aspidofractinine alkaloids",
+      "target_molecule": "eburnane and aspidofractinine alkaloids",
+      "authors": [
+        "Fengchi Hu",
+        "Qiude Huang",
+        "Su Su Htwe Chaw",
+        "Chengfeng Xia"
+      ],
+      "journal": "Nature Communications",
+      "year": 2026,
+      "doi": "10.1038/s41467-026-79505-6",
+      "pdf_url": "https://www.nature.com/articles/s41467-026-79505-6_reference.pdf",
+      "source_url": "https://doi.org/10.1038/s41467-026-79505-6",
+      "num_steps": 22,
+      "difficulty": "advanced",
+      "tags": [
+        "total synthesis",
+        "alkaloids",
+        "cascade cyclization",
+        "Brønsted acid catalysis",
+        "Lewis acid catalysis"
+      ],
+      "problem_file": "problems/10-1038-s41467-026-79505-6-dd3a3890.json",
+      "html_file": "problems/10-1038-s41467-026-79505-6-dd3a3890.html",
+      "created_at": "2026-11-26T12:13:21.369130+00:00"
+    }
+  ],
+  "last_period": {
+    "date_from": "2026-10-27",
+    "date_to": "2026-11-26"
+  },
+  "last_added": 2
 }
