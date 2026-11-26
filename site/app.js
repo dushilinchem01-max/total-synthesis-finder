@@ -1,23 +1,72 @@
 (() => {
   const STEPS_PER_ROW = 3;
-  const STORAGE_KEY = "synthesis_finder_progress_v1";
+  const STORAGE_KEY_BASE = "synthesis_finder_progress_v1";
   const THEME_KEY = "synthesis_finder_theme_v1";
+  const TOKEN_KEY = "synthesis_finder_token_v1";
+  const LOCAL_USERS_KEY = "synthesis_finder_local_users_v1";
+  const LOCAL_SESSION_KEY = "synthesis_finder_local_session_v1";
+  const GH_CONFIG_KEY = "synthesis_finder_gh_config_v1";
+  const DEFAULT_GH_REPO = detectDefaultGhRepo();
+  const ADMIN_DEFAULT_HASH = "b50e9399d856156dd7e3f6be6f4d53e8387da69678ec8dc76e4783308dff56f6";
 
   const state = {
     catalog: [],
     updatedAt: null,
     currentProblem: null,
     currentEntry: null,
-    progress: loadProgress(),
+    progress: {},
     hideReagents: false,
     hideProducts: false,
     activeGalaxy: null,
+    backendMode: "static", // "server" | "static"
+    serverHealth: null,
+    user: null, // { username, role } | null
+    authMode: "login", // "login" | "register"
+    adminPanelOpen: true,
+    pollTimer: null,
   };
 
   const els = {
     catalogView: document.getElementById("catalogView"),
     problemView: document.getElementById("problemView"),
     updatedLabel: document.getElementById("updatedLabel"),
+    authBar: document.getElementById("authBar"),
+    adminPanel: document.getElementById("adminPanel"),
+    adminModeBadge: document.getElementById("adminModeBadge"),
+    btnAdminRefreshCatalog: document.getElementById("btnAdminRefreshCatalog"),
+    adminPeriodPreset: document.getElementById("adminPeriodPreset"),
+    adminDateFromWrap: document.getElementById("adminDateFromWrap"),
+    adminDateToWrap: document.getElementById("adminDateToWrap"),
+    adminDateFrom: document.getElementById("adminDateFrom"),
+    adminDateTo: document.getElementById("adminDateTo"),
+    adminMaxArticles: document.getElementById("adminMaxArticles"),
+    btnAdminUpdate: document.getElementById("btnAdminUpdate"),
+    btnAdminDeleteAll: document.getElementById("btnAdminDeleteAll"),
+    adminSettingsDetails: document.getElementById("adminSettingsDetails"),
+    ghSettingsBox: document.getElementById("ghSettingsBox"),
+    serverSettingsBox: document.getElementById("serverSettingsBox"),
+    adminGhRepo: document.getElementById("adminGhRepo"),
+    adminGhToken: document.getElementById("adminGhToken"),
+    btnSaveGhConfig: document.getElementById("btnSaveGhConfig"),
+    btnClearGhConfig: document.getElementById("btnClearGhConfig"),
+    adminGeminiKey: document.getElementById("adminGeminiKey"),
+    serverKeyHint: document.getElementById("serverKeyHint"),
+    adminStatusBox: document.getElementById("adminStatusBox"),
+    adminStatusTitle: document.getElementById("adminStatusTitle"),
+    adminStatusLink: document.getElementById("adminStatusLink"),
+    adminStatusText: document.getElementById("adminStatusText"),
+    adminStatusLogs: document.getElementById("adminStatusLogs"),
+    authModal: document.getElementById("authModal"),
+    btnCloseAuth: document.getElementById("btnCloseAuth"),
+    tabLogin: document.getElementById("tabLogin"),
+    tabRegister: document.getElementById("tabRegister"),
+    authForm: document.getElementById("authForm"),
+    authUsername: document.getElementById("authUsername"),
+    authPassword: document.getElementById("authPassword"),
+    authConfirmWrap: document.getElementById("authConfirmWrap"),
+    authPasswordConfirm: document.getElementById("authPasswordConfirm"),
+    authMessage: document.getElementById("authMessage"),
+    authSubmitBtn: document.getElementById("authSubmitBtn"),
     heroReactionCount: document.getElementById("heroReactionCount"),
     heroProblemCount: document.getElementById("heroProblemCount"),
     heroProgressLabel: document.getElementById("heroProgressLabel"),
@@ -47,20 +96,118 @@
     btnBookmark: document.getElementById("btnBookmark"),
     btnMarkSolved: document.getElementById("btnMarkSolved"),
     btnSnakeHtml: document.getElementById("btnSnakeHtml"),
+    btnDeleteCurrentProblem: document.getElementById("btnDeleteCurrentProblem"),
     themeToggle: document.getElementById("themeToggle"),
   };
 
+  function detectDefaultGhRepo() {
+    try {
+      const host = window.location.hostname || "";
+      if (host.endsWith(".github.io")) {
+        const owner = host.replace(/\.github\.io$/, "");
+        const repo = (window.location.pathname || "").split("/").filter(Boolean)[0] || "";
+        if (owner && repo) return `${owner}/${repo}`;
+      }
+    } catch {
+      // ignore
+    }
+    return "dushilinchem01-max/total-synthesis-finder";
+  }
+
+  // Pure-JS SHA-256 (works identically across HTTPS, HTTP, localhost, and file://)
+  function sha256Hex(ascii) {
+    const rightRotate = (value, amount) => (value >>> amount) | (value << (32 - amount));
+    const mathPow = Math.pow;
+    const maxWord = mathPow(2, 32);
+    let result = "";
+    const words = [];
+    const utf8 = unescape(encodeURIComponent(ascii));
+    const asciiBitLength = utf8.length * 8;
+    const hash = [];
+    const k = [];
+    let primeCounter = 0;
+    const isComposite = {};
+    for (let candidate = 2; primeCounter < 64; candidate++) {
+      if (!isComposite[candidate]) {
+        for (let i = 0; i < 313; i += candidate) isComposite[i] = candidate;
+        hash[primeCounter] = (mathPow(candidate, 0.5) * maxWord) | 0;
+        k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0;
+      }
+    }
+    let padded = utf8 + "\x80";
+    while (padded.length % 64 - 56) padded += "\x00";
+    for (let i = 0; i < padded.length; i++) {
+      const j = padded.charCodeAt(i);
+      words[i >> 2] |= j << (((3 - i) % 4) * 8);
+    }
+    words[words.length] = (asciiBitLength / maxWord) | 0;
+    words[words.length] = asciiBitLength;
+
+    for (let j = 0; j < words.length;) {
+      const w = words.slice(j, (j += 16));
+      const oldHash = hash.slice(0);
+      for (let i = 0; i < 64; i++) {
+        const w15 = w[i - 15], w2 = w[i - 2];
+        const a = hash[0], e = hash[4];
+        const temp1 =
+          hash[7] +
+          (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25)) +
+          ((e & hash[5]) ^ (~e & hash[6])) +
+          k[i] +
+          (w[i] =
+            i < 16
+              ? w[i]
+              : (w[i - 16] +
+                  (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3)) +
+                  w[i - 7] +
+                  (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))) |
+                0);
+        const temp2 =
+          (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22)) +
+          ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
+        hash.unshift((temp1 + temp2) | 0);
+        hash[4] = (hash[4] + temp1) | 0;
+        hash.pop();
+      }
+      for (let i = 0; i < 8; i++) hash[i] = (hash[i] + oldHash[i]) | 0;
+    }
+    for (let i = 0; i < 8; i++) {
+      for (let j = 3; j + 1; j--) {
+        const b = (hash[i] >> (j * 8)) & 255;
+        result += (b < 16 ? "0" : "") + b.toString(16);
+      }
+    }
+    return result;
+  }
+
+  function hashCredential(username, password) {
+    return sha256Hex(`sf_v1:${String(username || "").trim().toLowerCase()}:${String(password || "")}`);
+  }
+
+  function isAdmin() {
+    return Boolean(state.user && state.user.role === "admin");
+  }
+
+  function currentProgressKey() {
+    if (state.user && state.user.username) {
+      return `${STORAGE_KEY_BASE}_u_${state.user.username.toLowerCase()}`;
+    }
+    return STORAGE_KEY_BASE;
+  }
+
   function loadProgress() {
     try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      return JSON.parse(localStorage.getItem(currentProgressKey()) || "{}");
     } catch {
       return {};
     }
   }
 
   function saveProgress() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.progress));
+    localStorage.setItem(currentProgressKey(), JSON.stringify(state.progress));
   }
+
+  state.progress = loadProgress();
 
   function getStatus(id) {
     return state.progress[id] || { solved: false, bookmarked: false };
@@ -106,6 +253,8 @@
   }
 
   function populateJournalFilter() {
+    const prev = els.journalFilter.value;
+    els.journalFilter.innerHTML = '<option value="">All journals</option>';
     const journals = [...new Set(state.catalog.map(p => p.journal).filter(Boolean))].sort();
     journals.forEach(j => {
       const opt = document.createElement("option");
@@ -113,6 +262,9 @@
       opt.textContent = j;
       els.journalFilter.appendChild(opt);
     });
+    if (prev && journals.includes(prev)) {
+      els.journalFilter.value = prev;
+    }
   }
 
   const GALAXIES = [
@@ -334,6 +486,13 @@
     els.statsRow.textContent = `Showing ${filtered.length} of ${state.catalog.length} total syntheses · ${solvedCount} solved${galaxySuffix}`;
 
     els.catalogGrid.innerHTML = "";
+    if (state.catalog.length === 0) {
+      els.emptyState.textContent = isAdmin()
+        ? "Каталог синтезов пуст. Выберите период выше в панели администратора и нажмите «Обновить синтезы»."
+        : "Каталог синтезов пока пуст. Войдите как администратор, чтобы загрузить новые синтезы.";
+    } else {
+      els.emptyState.textContent = "No synthesis problems match your current filters.";
+    }
     els.emptyState.classList.toggle("hidden", filtered.length > 0);
 
     filtered.forEach(item => {
@@ -347,6 +506,9 @@
       const tagsHtml = (item.tags || []).slice(0, 3).map(t => `<span class="pill">${escapeHtml(t)}</span>`).join("");
       const solvedBadge = st.solved ? `<span class="pill pill-solved">Solved</span>` : "";
       const bookmarkBadge = st.bookmarked ? `<span class="pill pill-accent">Saved</span>` : "";
+      const deleteBtnHtml = isAdmin()
+        ? `<button type="button" class="btn btn-danger btn-danger-sm" data-delete-id="${escapeHtml(item.id)}">Удалить</button>`
+        : "";
 
       card.innerHTML = `
         <div>
@@ -364,9 +526,19 @@
         </div>
         <div class="card-footer">
           <span>${escapeHtml(item.journal || "Open Access")}</span>
-          <span>${escapeHtml(item.year || "")}</span>
+          <div class="card-footer-right">
+            <span>${escapeHtml(item.year || "")}</span>
+            ${deleteBtnHtml}
+          </div>
         </div>
       `;
+      const delBtn = card.querySelector("[data-delete-id]");
+      if (delBtn) {
+        delBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          handleDeleteProblem(item.id, item.target_molecule || item.title);
+        });
+      }
       els.catalogGrid.appendChild(card);
     });
   }
@@ -427,6 +599,10 @@
       els.btnSnakeHtml.classList.remove("hidden");
     } else {
       els.btnSnakeHtml.classList.add("hidden");
+    }
+
+    if (els.btnDeleteCurrentProblem) {
+      els.btnDeleteCurrentProblem.classList.toggle("hidden", !isAdmin());
     }
 
     updateActionButtons();
@@ -728,6 +904,7 @@
           glyph,
           isCore,
           phase: rng() * Math.PI * 2,
+          freq: 0.7 + rng() * 0.9,
           namedLabel: reactionName,
         });
       }
@@ -888,23 +1065,26 @@
           const depthFade = Math.max(0.45, Math.min(1.1, scale));
           const isThisStarHover = hoveredStar && hoveredStar.star === st;
 
-          // Gentle twinkle/shimmer when hovering over the galaxy
-          const hoverShimmer = isHoveredGal
-            ? 0.65 + 0.45 * Math.sin(tick * 0.16 + st.phase)
-            : 1;
-          const twinkle = Boolean(isThisStarHover || (isHoveredGal && Math.sin(tick * 0.16 + st.phase) > 0.72));
-          const boost = isThisStarHover ? 1.5 : (isHoveredGal ? 1.28 * hoverShimmer : (isActiveGal ? 1.2 : 1));
+          // Ambient sine-pulse breathing ("soft breathing") across all stars
+          const breathT = tick * 0.04;
+          const breath = 0.5
+            + 0.25 * Math.sin(breathT * 1.1 * st.freq + st.phase)
+            + 0.25 * Math.sin(breathT * 2.3 + st.phase * 1.7);
+          const breathAlpha = 0.35 + breath * 0.75;
+          const breathSize = 0.85 + breath * 0.45;
+          const twinkle = Boolean(isThisStarHover || breath > (isHoveredGal ? 0.82 : 0.88));
+          const boost = isThisStarHover ? 1.5 : (isHoveredGal ? 1.2 : (isActiveGal ? 1.15 : 1));
           const dimOther = (state.activeGalaxy && !isActiveGal && !isHoveredGal) ? 0.58 : 1;
 
           const item = {
             x: px,
             y: py,
             z: camP.z,
-            size: (isThisStarHover ? 3.2 : st.size * scale) * (isHoveredGal ? 1.08 : 1),
+            size: (isThisStarHover ? 3.2 : st.size * scale * breathSize) * (isHoveredGal ? 1.08 : 1),
             glyph: isThisStarHover ? "sparkle" : st.glyph,
             color: st.isCore ? coreColor : baseColor,
             twinkle,
-            alpha: st.alpha * depthFade * boost * dimOther,
+            alpha: st.alpha * depthFade * breathAlpha * boost * dimOther,
           };
           drawList.push(item);
 
